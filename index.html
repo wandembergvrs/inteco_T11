@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Índice — Simuladores de Oferta & Demanda</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--ink:#e5e7eb;--muted:#a3a3a3;--line:#1f2937;
+      --accent:#60a5fa;--accent2:#22c55e;--warn:#f59e0b
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; color:var(--ink); background:linear-gradient(180deg,#0b1020,#0f172a 55%); min-height:100vh; display:grid; grid-template-rows:auto 1fr auto}
+    header{padding:22px 20px; border-bottom:1px solid var(--line)}
+    header h1{margin:0; font-size:22px}
+    main{padding:20px}
+    .grid{display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:16px}
+    @media(min-width:740px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(min-width:1080px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; position:relative}
+    .title{font-weight:700; font-size:16px}
+    .desc{color:#cbd5e1; font-size:13px; line-height:1.35}
+    .actions{display:flex; gap:8px; margin-top:8px}
+    a.btn{appearance:none; text-decoration:none; background:#111827; border:1px solid var(--line); color:#e5e7eb; padding:9px 12px; border-radius:10px; font-weight:600; font-size:13px; text-align:center; flex:0 0 auto}
+    a.btn:hover{border-color:#334155}
+    footer{border-top:1px solid var(--line); padding:14px 20px; color:#cbd5e1; font-size:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap}
+    .warn{color:var(--warn)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Índice — Simuladores de Oferta & Demanda</h1>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- 1. Mudanças nos Excedentes -->
+      <article class="card">
+        <div class="title">Mudanças nos Excedentes</div>
+        <div class="desc">Simula a variação nos excedentes a partir de alterações nas curvas e/ou variáveis</div>
+        <div class="actions">
+          <a class="btn" href="/excedentes.html">ENTRAR</a>
+        </div>
+      </article>
+
+      <!-- 2. Equilíbrio -->
+      <article class="card">
+        <div class="title">Equilíbrio</div>
+        <div class="desc">Demonstra variações ao redor da quantidade de equilíbrio</div>
+        <div class="actions">
+          <a class="btn" href="/equilibrio.html">ENTRAR</a>
+        </div>
+      </article>
+
+      <!-- 3. Preço (teto/piso) -->
+      <article class="card">
+        <div class="title">Preço (teto/piso)</div>
+        <div class="desc">Simula a escassez e excesso no caso de preços piso e teto</div>
+        <div class="actions">
+          <a class="btn" href="#">EM DESENVOLVIMENTO</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer>
+    <div><span class="warn">Dica:</span> publique tudo em uma pasta e abra <code>index.html</code> no navegador.</div>
+  </footer>
+</body>
+</html>
