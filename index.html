@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador: Oferta & Demanda — Excedentes, Impostos & Subsídios</title>
+  <style>
+    :root {
+      --bg: #0f172a;       /* slate-900 */
+      --card: #111827;     /* gray-900 */
+      --muted: #94a3b8;    /* slate-400 */
+      --text: #e5e7eb;     /* gray-200 */
+      --accent: #22d3ee;   /* cyan-400 */
+      --cs: rgba(99, 102, 241, 0.35);   /* indigo */
+      --ps: rgba(34, 197, 94, 0.35);    /* emerald */
+      --grid: #1f2937;     /* gray-800 */
+      --axis: #9ca3af;     /* gray-400 */
+      --line: #e5e7eb;
+      --danger: #f43f5e;   /* rose-500 */
+      --rev: rgba(250, 204, 21, .28);   /* amber for tax revenue */
+      --dwl: rgba(244, 63, 94, .28);    /* rose for deadweight loss */
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; background: linear-gradient(180deg, #0b1220, #0f172a 30%); color: var(--text); min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+    header { padding: 16px 20px; display: flex; gap: 12px; align-items: baseline; border-bottom: 1px solid #111827; }
+    header h1 { margin: 0; font-weight: 700; font-size: 20px; letter-spacing: .2px; }
+    header .sub { color: var(--muted); font-size: 13px; }
+
+    .wrap { display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px; }
+    .panel { background: var(--card); border: 1px solid #1f2937; border-radius: 14px; padding: 14px; }
+    .controls { display: grid; gap: 10px; }
+    .row { display: grid; grid-template-columns: 1fr 70px; align-items: center; gap: 10px; }
+    .row.big { grid-template-columns: 1fr 1fr; }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+    input[type="range"] { width: 100%; }
+    .val { font-variant-numeric: tabular-nums; text-align: right; font-size: 13px; color: var(--text); }
+
+    fieldset { border: 1px solid #1f2937; border-radius: 10px; padding: 8px 10px; }
+    fieldset legend { color: var(--muted); font-size: 12px; padding: 0 6px; }
+    .policy-grid { display:grid; gap:10px; }
+    .radio { display:flex; gap:10px; align-items:center; font-size: 12px; color:var(--muted); }
+
+    .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+    button { cursor: pointer; background: #0b1220; border: 1px solid #1f2937; color: var(--text); padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: 12px; }
+    button:hover { border-color: #334155; }
+    button.danger { background: #1a0b10; border-color: #3f1d29; color: #fecdd3; }
+
+    .legend { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
+    .dot.cs { background: var(--cs); border: 1px solid #6366f1; }
+    .dot.ps { background: var(--ps); border: 1px solid #22c55e; }
+    .dot.rev { background: var(--rev); border: 1px solid #f59e0b; }
+    .dot.dwl { background: var(--dwl); border: 1px solid #f43f5e; }
+    .lineD, .lineS { width: 18px; height: 0; border-top: 3px solid var(--line); display: inline-block; position: relative; }
+    .lineD::after { content:""; position:absolute; right:-2px; top:-3px; width:6px; height:6px; border-radius:50%; background:#6366f1; }
+    .lineS::after { content:""; position:absolute; right:-2px; top:-3px; width:6px; height:6px; border-radius:50%; background:#22c55e; }
+
+    .canvasCard { position: relative; }
+    canvas { width: 100%; height: 100%; display: block; background: radial-gradient(1200px 600px at 40% -100px, rgba(34,197,94,.08), rgba(99,102,241,.05) 40%, transparent 60%), linear-gradient(180deg, #0a0f1b, #0b1220 50%, #0f172a 100%); border-radius: 14px; }
+
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+    .metric { background: #0b1220; border: 1px solid #1f2937; border-radius: 12px; padding: 10px; }
+    .metric .k { font-size: 12px; color: var(--muted); }
+    .metric .v { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 18px; }
+
+    footer { padding: 12px 16px; color: var(--muted); font-size: 12px; border-top: 1px solid #111827; display:flex; justify-content:space-between; align-items:center; }
+    .note { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Simulador — Oferta & Demanda</h1>
+    <span class="sub">agora com impostos, subsídios e DWL</span>
+  </header>
+
+  <main class="wrap">
+    <section class="panel controls" aria-label="Controles">
+      <div class="row big">
+        <div>
+          <label for="a">Intercepto da Demanda (<em>a</em>) — P = a − b·Q</label>
+          <input id="a" type="range" min="10" max="120" step="1" value="80">
+        </div>
+        <div class="val"><span id="aval">80.0</span></div>
+      </div>
+      <div class="row big">
+        <div>
+          <label for="b">Inclinação da Demanda (<em>b</em>)</label>
+          <input id="b" type="range" min="0.2" max="5" step="0.1" value="2.0">
+        </div>
+        <div class="val"><span id="bval">2.0</span></div>
+      </div>
+      <div class="row big">
+        <div>
+          <label for="c">Intercepto da Oferta (<em>c</em>) — P = c + d·Q</label>
+          <input id="c" type="range" min="-20" max="80" step="1" value="20">
+        </div>
+        <div class="val"><span id="cval">20.0</span></div>
+      </div>
+      <div class="row big">
+        <div>
+          <label for="d">Inclinação da Oferta (<em>d</em>)</label>
+          <input id="d" type="range" min="0.2" max="5" step="0.1" value="1.5">
+        </div>
+        <div class="val"><span id="dval">1.5</span></div>
+      </div>
+
+      <fieldset>
+        <legend>Política (imposto/subsídio por unidade)</legend>
+        <div class="policy-grid">
+          <div class="row">
+            <div>
+              <label for="tau">Taxa por unidade (τ) — positivo = imposto, negativo = subsídio</label>
+              <input id="tau" type="range" min="-40" max="40" step="1" value="0">
+            </div>
+            <div class="val"><span id="tauval">0</span></div>
+          </div>
+          <div class="radio">
+            <label><input type="radio" name="inc" value="seller" checked> Incide sobre <strong>vendedores</strong></label>
+            <label><input type="radio" name="inc" value="buyer"> Incide sobre <strong>consumidores</strong></label>
+            <label style="margin-left:auto"><input type="checkbox" id="showDWL" checked> Mostrar DWL</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="buttons">
+        <button id="dUp">↑ Aumentar demanda (a +)</button>
+        <button id="dDown">↓ Reduzir demanda (a −)</button>
+        <button id="sUp">↑ Choque de custo (c +)</button>
+        <button id="sDown">↓ Reduzir custos (c −)</button>
+      </div>
+
+      <div class="legend">
+        <span class="chip"><span class="lineD"></span> Demanda</span>
+        <span class="chip"><span class="lineS"></span> Oferta</span>
+        <span class="chip"><span class="dot cs"></span> Excedente do Consumidor</span>
+        <span class="chip"><span class="dot ps"></span> Excedente do Produtor</span>
+        <span class="chip"><span class="dot rev"></span> Receita/Despesa do Governo</span>
+        <span class="chip"><span class="dot dwl"></span> Perda de Peso Morto (DWL)</span>
+      </div>
+
+      <div class="metrics" aria-live="polite">
+        <div class="metric"><div class="k">Preço bruto (consumidor) Pᵇ</div><div class="v" id="pb">—</div></div>
+        <div class="metric"><div class="k">Preço líquido (vendedor) Pˢ</div><div class="v" id="ps">—</div></div>
+        <div class="metric"><div class="k">Quantidade (Q*)</div><div class="v" id="qstar">—</div></div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">Excedente do Consumidor (CS)</div><div class="v" id="cs">—</div></div>
+        <div class="metric"><div class="k">Excedente do Produtor (PS)</div><div class="v" id="psur">—</div></div>
+        <div class="metric"><div class="k">Governo (τ·Q; negativo = gasto)</div><div class="v" id="gov">—</div></div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">Bem-estar total</div><div class="v" id="w">—</div></div>
+        <div class="metric"><div class="k">DWL</div><div class="v" id="dwl">—</div></div>
+        <div class="metric"><div class="k">Status</div><div class="v" id="status">OK</div></div>
+      </div>
+
+      <div class="note">Modelo linear: <strong>P = a − bQ</strong> (demanda), <strong>P = c + dQ</strong> (oferta). Imposto/subsídio por unidade: τ &gt; 0 imposto, τ &lt; 0 subsídio. Incidência escolhida apenas define quem paga/recebe o preço; a quantidade é igual.</div>
+    </section>
+
+    <section class="panel canvasCard" aria-label="Gráfico">
+      <canvas id="chart" width="900" height="600" aria-label="Plano P×Q com curvas de oferta e demanda"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <div>Use os controles para simular choques. As áreas coloridas mostram CS, PS, receita/gasto do governo e DWL.</div>
+    <div>
+      <button id="reset" class="danger">Restaurar padrão</button>
+      <button id="download">Baixar PNG</button>
+    </div>
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const a = $("a"), b = $("b"), c = $("c"), d = $("d"), tau = $("tau");
+    const aval = $("aval"), bval = $("bval"), cval = $("cval"), dval = $("dval"), tauval = $("tauval");
+    const pbEl = $("pb"), psEl = $("ps"), qEl = $("qstar"), statusEl = $("status");
+    const csEl = $("cs"), psurEl = $("psur"), govEl = $("gov"), wEl = $("w"), dwlEl = $("dwl");
+    const showDWLEl = $("showDWL");
+    const canvas = $("chart");
+    const ctx = canvas.getContext("2d");
+
+    const pad = { left: 70, right: 24, top: 24, bottom: 60 };
+    let Qmax = 80, Pmax = 120;
+
+    function toPX(x, y) {
+      const W = canvas.width - pad.left - pad.right;
+      const H = canvas.height - pad.top - pad.bottom;
+      const px = pad.left + (x / Qmax) * W;
+      const py = pad.top + H - (y / Pmax) * H;
+      return [px, py];
+    }
+
+    function line(x1,y1,x2,y2, strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--line'), width = 2) {
+      ctx.beginPath();
+      const [px1, py1] = toPX(x1,y1);
+      const [px2, py2] = toPX(x2,y2);
+      ctx.moveTo(px1,py1); ctx.lineTo(px2,py2);
+      ctx.lineWidth = width; ctx.strokeStyle = strokeStyle; ctx.stroke();
+    }
+    function poly(points, fill, stroke, width=1) {
+      if (!points.length) return;
+      ctx.beginPath();
+      const [p0x,p0y] = toPX(points[0][0], points[0][1]);
+      ctx.moveTo(p0x,p0y);
+      for (let i=1;i<points.length;i++){
+        const [x,y] = toPX(points[i][0], points[i][1]);
+        ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke){ ctx.lineWidth = width; ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+
+    function grid(){
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+      const W = canvas.width - pad.left - pad.right;
+      const H = canvas.height - pad.top - pad.bottom;
+
+      // grid
+      ctx.save();
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid');
+      ctx.lineWidth = 1; ctx.setLineDash([3,6]);
+      for(let q=0; q<=Qmax; q+=10){ line(q,0,q,Pmax, ctx.strokeStyle, 1); }
+      for(let p=0; p<=Pmax; p+=20){ line(0,p,Qmax,p, ctx.strokeStyle, 1); }
+      ctx.restore();
+
+      // axes
+      line(0,0,Qmax,0, getComputedStyle(document.documentElement).getPropertyValue('--axis'), 2.5);
+      line(0,0,0,Pmax, getComputedStyle(document.documentElement).getPropertyValue('--axis'), 2.5);
+
+      // labels
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text');
+      ctx.font = '12px ui-sans-serif, system-ui';
+      ctx.textAlign = 'center';
+      for(let q=0; q<=Qmax; q+=10){ const [x,y]=toPX(q,0); ctx.fillText(q.toString(), x, y+16); }
+      ctx.save(); ctx.textAlign = 'right';
+      for(let p=0; p<=Pmax; p+=20){ const [x,y]=toPX(0,p); ctx.fillText(p.toString(), x-8, y+4); }
+      ctx.restore();
+      ctx.fillText('Quantidade (Q)', pad.left + W/2, pad.top + H + 38);
+      ctx.save(); ctx.translate(18, pad.top + H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Preço (P)', 0, 0); ctx.restore();
+    }
+
+    function eqNoPolicy(A,B,C,D){
+      const denom = B + D; if (denom <= 0) return {ok:false};
+      const Q = (A - C)/denom; const P = A - B*Q;
+      if (!isFinite(Q) || !isFinite(P) || Q <= 0 || P <= 0) return { ok:false };
+      return { ok:true, Q, P };
+    }
+
+    function eqWithPolicy(A,B,C,D,tau, on){
+      // on: 'seller' or 'buyer' (incidência). Tau>0=imposto; tau<0=subsídio
+      let Q, Pb, Ps; // preço bruto (pago) e líquido (recebido)
+      const denom = B + D; if (denom <= 0) return {ok:false};
+      if (on === 'seller'){
+        Q = (A - C - tau)/denom;
+        Pb = A - B*Q;         // consumidores pagam
+        Ps = Pb - tau;        // vendedores recebem
+      } else {
+        Q = (A - tau - C)/denom;
+        Ps = C + D*Q;         // vendedores recebem
+        Pb = Ps + tau;        // consumidores pagam
+      }
+      if (!isFinite(Q) || !isFinite(Pb) || !isFinite(Ps) || Q <= 0 || Pb <= 0 || Ps <= 0) return { ok:false };
+      return { ok:true, Q, Pb, Ps };
+    }
+
+    function areas(A,B,C,D,Q,Pb,Ps,tau){
+      // CS: abaixo da demanda e acima do preço pago (Pb)
+      const CS = (A*Q - 0.5*B*Q*Q) - Pb*Q;
+      // PS: acima da oferta e abaixo do preço recebido (Ps)
+      const PS = Ps*Q - (C*Q + 0.5*D*Q*Q);
+      const GOV = tau * Q; // se tau<0 => gasto (negativo)
+      const W = CS + PS + GOV;
+      return { CS: Math.max(0, CS), PS: Math.max(0, PS), GOV, W };
+    }
+
+    function draw(){
+      const A = parseFloat(a.value), B = parseFloat(b.value), C = parseFloat(c.value), D = parseFloat(d.value), T = parseFloat(tau.value);
+      aval.textContent = A.toFixed(1); bval.textContent = B.toFixed(1); cval.textContent = C.toFixed(1); dval.textContent = D.toFixed(1); tauval.textContent = T.toFixed(0);
+      const incidence = document.querySelector('input[name="inc"]:checked').value;
+
+      // Ajuste de escala: usar interceptos teóricos sem truncar as linhas
+      const qIntD = Math.max(10, Math.min(400, A / Math.max(0.2,B)));
+      const qIntS = (C < 0) ? Math.max(10, Math.min(400, (-C)/Math.max(0.2,D))) : 80;
+      Qmax = Math.max(60, Math.ceil(Math.max(qIntD, qIntS) / 10) * 10);
+      Pmax = Math.max(60, Math.ceil(Math.max(A, C + D*Qmax, A + Math.abs(T), C + D*Qmax + Math.abs(T)) / 20) * 20);
+
+      grid();
+
+      // Equilíbrios
+      const base = eqNoPolicy(A,B,C,D);
+      const pol = eqWithPolicy(A,B,C,D,T, incidence);
+
+      if (!pol.ok){
+        statusEl.textContent = 'Sem equilíbrio positivo'; statusEl.style.color = 'var(--danger)';
+        pbEl.textContent = '—'; psEl.textContent = '—'; qEl.textContent = '—'; csEl.textContent = '—'; psurEl.textContent = '—'; govEl.textContent = '—'; wEl.textContent = '—'; dwlEl.textContent = '—';
+        // desenhar curvas mesmo assim
+      } else {
+        statusEl.textContent = 'OK'; statusEl.style.color = '#86efac';
+        pbEl.textContent = pol.Pb.toFixed(2); psEl.textContent = pol.Ps.toFixed(2); qEl.textContent = pol.Q.toFixed(2);
+
+        // Áreas sob política
+        const { CS, PS, GOV, W } = areas(A,B,C,D, pol.Q, pol.Pb, pol.Ps, T);
+        csEl.textContent = CS.toFixed(2); psurEl.textContent = PS.toFixed(2); govEl.textContent = GOV.toFixed(2); wEl.textContent = W.toFixed(2);
+
+        // DWL relativo ao equilíbrio sem política
+        let DWL = 0;
+        if (base.ok){
+          const { CS: CS0, PS: PS0, GOV: GOV0, W: W0 } = areas(A,B,C,D, base.Q, base.P, base.P, 0);
+          DWL = Math.max(0, W0 - W);
+          dwlEl.textContent = DWL.toFixed(2);
+        } else { dwlEl.textContent = '—'; }
+
+        // Desenhar retas de preços e wedge
+        line(0, pol.Pb, pol.Q, pol.Pb, '#94a3b8', 1.5); // preço consumidor
+        line(0, pol.Ps, pol.Q, pol.Ps, '#94a3b8', 1.5); // preço produtor
+
+        // Receita/Despesa do governo: retângulo entre Pb e Ps até Q
+        const revPoly = [ [0, pol.Ps], [pol.Q, pol.Ps], [pol.Q, pol.Pb], [0, pol.Pb] ];
+        poly(revPoly, getComputedStyle(document.documentElement).getPropertyValue('--rev'), '#f59e0b', 1.2);
+
+        // DWL (triângulo entre quantidade base e com política)
+        if (showDWLEl.checked && base.ok){
+          // pontos: (Qpol, preço na demanda), (Qpol, preço na oferta), (Q0, preço comum no ponto de meia-quebra)
+          // Para desenhar o triângulo corretamente, basta usar o valor da wedge τ e a diferença de quantidades
+          const midP = (pol.Pb + pol.Ps) / 2;
+          const dwlPoly = [ [pol.Q, pol.Ps], [pol.Q, pol.Pb], [base.Q, midP] ];
+          poly(dwlPoly, getComputedStyle(document.documentElement).getPropertyValue('--dwl'), '#f43f5e', 1.2);
+        }
+
+        // Marcar pontos de equilíbrio
+        const [exb,eyb] = toPX(pol.Q, pol.Pb);
+        ctx.beginPath(); ctx.arc(exb,eyb,4,0,2*Math.PI); ctx.fillStyle = '#fde68a'; ctx.fill();
+        ctx.fillStyle = '#e5e7eb'; ctx.font = '12px ui-sans-serif, system-ui';
+        ctx.fillText(`Eτ(Q=${pol.Q.toFixed(1)})`, exb+8, eyb-8);
+
+        if (base.ok){
+          const [ex0,ey0] = toPX(base.Q, base.P);
+          ctx.beginPath(); ctx.arc(ex0,ey0,3,0,2*Math.PI); ctx.fillStyle = '#60a5fa'; ctx.fill();
+          ctx.fillStyle = '#93c5fd'; ctx.fillText(`E₀(Q=${base.Q.toFixed(1)})`, ex0+8, ey0-8);
+        }
+
+        // Áreas de CS e PS com política
+        const csPoly = [ [0, pol.Pb], [0, Math.min(Pmax, A)], [pol.Q, Math.max(0, A - B*pol.Q)], [pol.Q, pol.Pb] ];
+        poly(csPoly, getComputedStyle(document.documentElement).getPropertyValue('--cs'), '#6366f1', 1.2);
+        const psPoly = [ [0, Math.max(0, C)], [pol.Q, Math.max(0, C + D*pol.Q)], [pol.Q, pol.Ps], [0, pol.Ps] ];
+        poly(psPoly, getComputedStyle(document.documentElement).getPropertyValue('--ps'), '#22c55e', 1.2);
+      }
+
+      // Desenhar curvas após áreas (para ficarem por cima)
+      // Demanda (sem deslocar; a incidência no consumidor desloca preço pago, não a curva desenhada)
+      const d0_y0 = A; const d0_yQ = A - B*Qmax;
+      line(0, d0_y0, Qmax, d0_yQ, '#a5b4fc', 3);
+      // Oferta
+      const s0_y0 = C; const s0_yQ = C + D*Qmax;
+      line(0, s0_y0, Qmax, s0_yQ, '#86efac', 3);
+    }
+
+    // Eventos
+    [a,b,c,d,tau].forEach(inp => inp.addEventListener('input', draw));
+    document.querySelectorAll('input[name="inc"]').forEach(r => r.addEventListener('change', draw));
+    showDWLEl.addEventListener('change', draw);
+    $("dUp").addEventListener('click', ()=>{ a.value = (+a.value + 5).toString(); draw(); });
+    $("dDown").addEventListener('click', ()=>{ a.value = (+a.value - 5).toString(); draw(); });
+    $("sUp").addEventListener('click', ()=>{ c.value = (+c.value + 5).toString(); draw(); });
+    $("sDown").addEventListener('click', ()=>{ c.value = (+c.value - 5).toString(); draw(); });
+    $("reset").addEventListener('click', ()=>{ a.value=80; b.value=2.0; c.value=20; d.value=1.5; tau.value=0; draw(); });
+    $("download").addEventListener('click', ()=>{ const link = document.createElement('a'); link.download = 'oferta_demanda_excedentes.png'; link.href = canvas.toDataURL('image/png'); link.click(); });
+
+    function resizeCanvas(){
+      const rect = canvas.getBoundingClientRect(); const scale = window.devicePixelRatio || 1;
+      canvas.width = Math.max(700, Math.floor(rect.width * scale));
+      canvas.height = Math.max(480, Math.floor(rect.width * 0.64 * scale));
+      draw();
+    }
+    new ResizeObserver(resizeCanvas).observe(canvas);
+    window.addEventListener('load', resizeCanvas);
+  </script>
+</body>
+</html>
