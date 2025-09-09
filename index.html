@@ -72,7 +72,7 @@
 <body>
   <header>
     <h1>Simulador — Oferta & Demanda</h1>
-    
+    <span class="sub">excedentes, impostos, subsídios e DWL</span>
   </header>
 
   <main class="wrap">
@@ -299,24 +299,22 @@
       if (!pol.ok){
         statusEl.textContent = 'Sem equilíbrio positivo'; statusEl.style.color = 'var(--danger)';
         pbEl.textContent = '—'; psEl.textContent = '—'; qEl.textContent = '—'; csEl.textContent = '—'; psurEl.textContent = '—'; govEl.textContent = '—'; wEl.textContent = '—'; dwlEl.textContent = '—';
-        // desenhar curvas mesmo assim
       } else {
         statusEl.textContent = 'OK'; statusEl.style.color = '#86efac';
         pbEl.textContent = pol.Pb.toFixed(2); psEl.textContent = pol.Ps.toFixed(2); qEl.textContent = pol.Q.toFixed(2);
 
-        // Áreas sob política
+        // Áreas sob política (valores)
         const { CS, PS, GOV, W } = areas(A,B,C,D, pol.Q, pol.Pb, pol.Ps, T);
         csEl.textContent = CS.toFixed(2); psurEl.textContent = PS.toFixed(2); govEl.textContent = GOV.toFixed(2); wEl.textContent = W.toFixed(2);
 
         // DWL relativo ao equilíbrio sem política
-        let DWL = 0;
         if (base.ok){
-          const { CS: CS0, PS: PS0, GOV: GOV0, W: W0 } = areas(A,B,C,D, base.Q, base.P, base.P, 0);
-          DWL = Math.max(0, W0 - W);
+          const { W: W0 } = areas(A,B,C,D, base.Q, base.P, base.P, 0);
+          const DWL = Math.max(0, W0 - W);
           dwlEl.textContent = DWL.toFixed(2);
         } else { dwlEl.textContent = '—'; }
 
-        // Desenhar retas de preços e wedge
+        // Retas de preços e wedge
         line(0, pol.Pb, pol.Q, pol.Pb, '#94a3b8', 1.5); // preço consumidor
         line(0, pol.Ps, pol.Q, pol.Ps, '#94a3b8', 1.5); // preço produtor
 
@@ -324,16 +322,14 @@
         const revPoly = [ [0, pol.Ps], [pol.Q, pol.Ps], [pol.Q, pol.Pb], [0, pol.Pb] ];
         poly(revPoly, getComputedStyle(document.documentElement).getPropertyValue('--rev'), '#f59e0b', 1.2);
 
-        // DWL (triângulo entre quantidade base e com política)
+        // DWL (triângulo entre Q base e Q política)
         if (showDWLEl.checked && base.ok){
-          // pontos: (Qpol, preço na demanda), (Qpol, preço na oferta), (Q0, preço comum no ponto de meia-quebra)
-          // Para desenhar o triângulo corretamente, basta usar o valor da wedge τ e a diferença de quantidades
           const midP = (pol.Pb + pol.Ps) / 2;
           const dwlPoly = [ [pol.Q, pol.Ps], [pol.Q, pol.Pb], [base.Q, midP] ];
           poly(dwlPoly, getComputedStyle(document.documentElement).getPropertyValue('--dwl'), '#f43f5e', 1.2);
         }
 
-        // Marcar pontos de equilíbrio
+        // Pontos de equilíbrio
         const [exb,eyb] = toPX(pol.Q, pol.Pb);
         ctx.beginPath(); ctx.arc(exb,eyb,4,0,2*Math.PI); ctx.fillStyle = '#fde68a'; ctx.fill();
         ctx.fillStyle = '#e5e7eb'; ctx.font = '12px ui-sans-serif, system-ui';
@@ -345,20 +341,54 @@
           ctx.fillStyle = '#93c5fd'; ctx.fillText(`E₀(Q=${base.Q.toFixed(1)})`, ex0+8, ey0-8);
         }
 
-        // Áreas de CS e PS com política
-        const csPoly = [ [0, pol.Pb], [0, Math.min(Pmax, A)], [pol.Q, Math.max(0, A - B*pol.Q)], [pol.Q, pol.Pb] ];
+        // --- ÁREA DO CS ---
+        const csPoly = [
+          [0, pol.Pb],
+          [0, Math.min(Pmax, A)],
+          [pol.Q, Math.max(0, A - B*pol.Q)],
+          [pol.Q, pol.Pb]
+        ];
         poly(csPoly, getComputedStyle(document.documentElement).getPropertyValue('--cs'), '#6366f1', 1.2);
-        const psPoly = [ [0, Math.max(0, C)], [pol.Q, Math.max(0, C + D*pol.Q)], [pol.Q, pol.Ps], [0, pol.Ps] ];
-        poly(psPoly, getComputedStyle(document.documentElement).getPropertyValue('--ps'), '#22c55e', 1.2);
+
+        // ===== CORREÇÃO DO PS QUANDO C < 0 =====
+        const fillPS = getComputedStyle(document.documentElement).getPropertyValue('--ps');
+        const strokePS = '#22c55e';
+
+        if (C >= 0) {
+          // Caso usual: oferta já positiva na origem
+          const psPoly = [
+            [0, C],
+            [pol.Q, C + D*pol.Q],
+            [pol.Q, pol.Ps],
+            [0, pol.Ps]
+          ];
+          poly(psPoly, fillPS, strokePS, 1.2);
+        } else {
+          // Oferta cruza P=0 em q0 = -C/D
+          const q0 = Math.max(0, -C / Math.max(D, 1e-6));
+          const qz = Math.min(pol.Q, q0); // até onde a oferta é ≤ 0 no intervalo [0, Q*]
+
+          // (1) Retângulo esquerdo: de 0 até qz, entre P=0 e P=Ps
+          if (qz > 0) {
+            const leftRect = [ [0,0], [qz,0], [qz, pol.Ps], [0, pol.Ps] ];
+            poly(leftRect, fillPS, strokePS, 1.2);
+          }
+
+          // (2) Parte direita: de qz até Q*, entre oferta e P=Ps
+          if (pol.Q > qz) {
+            const s_qz = Math.max(0, C + D*qz); // ~0 numericamente
+            const s_Q  = C + D*pol.Q;           // já positivo nessa faixa
+            const rightPoly = [ [qz, s_qz], [pol.Q, s_Q], [pol.Q, pol.Ps], [qz, pol.Ps] ];
+            poly(rightPoly, fillPS, strokePS, 1.2);
+          }
+        }
       }
 
-      // Desenhar curvas após áreas (para ficarem por cima)
-      // Demanda (sem deslocar; a incidência no consumidor desloca preço pago, não a curva desenhada)
+      // Curvas por cima das áreas
       const d0_y0 = A; const d0_yQ = A - B*Qmax;
-      line(0, d0_y0, Qmax, d0_yQ, '#a5b4fc', 3);
-      // Oferta
+      line(0, d0_y0, Qmax, d0_yQ, '#a5b4fc', 3);   // Demanda
       const s0_y0 = C; const s0_yQ = C + D*Qmax;
-      line(0, s0_y0, Qmax, s0_yQ, '#86efac', 3);
+      line(0, s0_y0, Qmax, s0_yQ, '#86efac', 3);  // Oferta
     }
 
     // Eventos
@@ -370,7 +400,12 @@
     $("sUp").addEventListener('click', ()=>{ c.value = (+c.value + 5).toString(); draw(); });
     $("sDown").addEventListener('click', ()=>{ c.value = (+c.value - 5).toString(); draw(); });
     $("reset").addEventListener('click', ()=>{ a.value=80; b.value=2.0; c.value=20; d.value=1.5; tau.value=0; draw(); });
-    $("download").addEventListener('click', ()=>{ const link = document.createElement('a'); link.download = 'oferta_demanda_excedentes.png'; link.href = canvas.toDataURL('image/png'); link.click(); });
+    $("download").addEventListener('click', ()=>{
+      const link = document.createElement('a');
+      link.download = 'oferta_demanda_excedentes.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
 
     function resizeCanvas(){
       const rect = canvas.getBoundingClientRect(); const scale = window.devicePixelRatio || 1;
@@ -383,4 +418,3 @@
   </script>
 </body>
 </html>
-
