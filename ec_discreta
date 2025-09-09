@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excedente do Consumidor — Demanda Discreta (com exemplos)</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--axis:#9ca3af;--grid:#1f2937;
+      --csFill:rgba(99,102,241,.35); --csStroke:#6366f1; --price:#fcd34d; --dStroke:#60a5fa;
+    }
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    header{padding:16px 20px;border-bottom:1px solid #0b1020}
+    main{display:grid;grid-template-columns:420px 1fr;gap:16px;padding:16px}
+    .panel{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+    input[type=range], select{width:100%}
+    .row{display:grid;grid-template-columns:1fr 100px;gap:10px;align-items:center}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .val{text-align:right;font-size:13px;font-variant-numeric:tabular-nums}
+    button{cursor:pointer;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;padding:9px 10px;border-radius:10px;font-weight:600;font-size:12px}
+    button:hover{border-color:#334155}
+    .metric{margin-top:10px;font-size:14px}
+    .small{color:var(--muted);font-size:12px}
+    canvas{width:100%;height:100%;display:block;background:#0b1220;border-radius:14px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+    th,td{border-bottom:1px solid #1f2937;padding:6px 8px;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    tr.buy td{background:rgba(34,197,94,.10)}
+    .legend{display:flex;gap:14px;justify-content:center;margin-top:6px;color:#cbd5e1;font-size:12px;flex-wrap:wrap}
+    .dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+    .dot.cs{background:var(--csFill);border:1px solid var(--csStroke)}
+    .dot.d{background:#60a5fa;border:1px solid #60a5fa}
+    .dot.p{background:#fcd34d;border:1px solid #f59e0b}
+    .example{margin-top:10px;font-size:14px;color:#fef08a;background:#1f2937;padding:8px;border-radius:8px}
+    @media (max-width:980px){main{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Excedente do Consumidor — Demanda Discreta</h1>
+    <div class="sub">O <strong>excedente do consumidor</strong> é a <strong>área acima da linha de preço</strong> e <strong>abaixo da curva de demanda discreta</strong>. Cada retângulo azul mostra um <strong>CSᵢ</strong> (ganho individual). O valor total é a soma de todos.</div>
+  </header>
+  <main>
+    <section class="panel">
+      <label for="cat">Cenário</label>
+      <select id="cat">
+        <option value="gasolina">Gasolina (R$/litro)</option>
+        <option value="sorvetes">Sorvetes (R$/unidade)</option>
+        <option value="viagens">Viagens (R$ por pacote)</option>
+        <option value="arroz">Arroz (R$ pacote 5kg)</option>
+        <option value="roupas">Roupas (R$ por peça)</option>
+      </select>
+
+      <div class="two" style="margin-top:10px">
+        <div>
+          <label for="n">Número de consumidores (5–30)</label>
+          <input id="n" type="range" min="5" max="30" step="1" value="12" />
+        </div>
+        <div class="val" id="nval">12</div>
+      </div>
+
+      <div class="two" style="margin-top:6px">
+        <div>
+          <label for="p">Preço (P)</label>
+          <input id="p" type="range" min="0" max="1000" step="0.5" value="5" />
+        </div>
+        <div class="val"><span id="pval">R$ 5,00</span></div>
+      </div>
+
+      <div class="two" style="margin-top:6px">
+        <button id="regen">Gerar cenário</button>
+        <button id="sort">Ordenar valores (↓)</button>
+      </div>
+
+      <div class="metric">Q(P): <span id="qOut">—</span> &nbsp;|&nbsp; CS total: <span id="csOut">—</span></div>
+      <div class="example" id="exampleBox">Exemplo: —</div>
+
+      <table>
+        <thead><tr><th>Consumidor</th><th>Item</th><th>Valor (vᵢ)</th><th>Compra?</th><th>CSᵢ</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <canvas id="chart" width="980" height="600"></canvas>
+      <div class="legend">
+        <span><span class="dot d"></span> Demanda (escada)</span>
+        <span><span class="dot p"></span> Preço (linha)</span>
+        <span><span class="dot cs"></span> Excedente do consumidor — <strong>CSᵢ = vᵢ − P</strong></span>
+      </div>
+    </section>
+  </main>
+
+<script>
+const $=id=>document.getElementById(id);
+const cat=$('cat'), n=$('n'), nval=$('nval'), p=$('p'), pval=$('pval');
+const regen=$('regen'), sortBtn=$('sort');
+const qOut=$('qOut'), csOut=$('csOut');
+const tbody=$('tbody');
+const exampleBox=$('exampleBox');
+const canvas=$('chart'); const ctx=canvas.getContext('2d');
+const pad={left:70,right:20,top:24,bottom:60};
+
+let DATA=[]; let sortedDesc=true; let QMAX=10, PMAX=12;
+
+const FIRST=["Ana","Bruno","Carla","Diego","Eduarda","Felipe","Gabriela","Henrique","Isabela","João","Karen","Lucas","Marina","Natália","Otávio","Paula","Rafael","Sofia","Tiago","Viviane","William","Yasmin","Zeca"];
+const LAST=["Silva","Souza","Oliveira","Santos","Pereira","Lima","Ferreira","Almeida","Gomes","Ribeiro","Carvalho","Rocha","Dias","Fernandes","Araújo","Cavalcanti","Correia","Barbosa","Melo","Martins"];
+function randName(){ return FIRST[Math.floor(Math.random()*FIRST.length)]+' '+LAST[Math.floor(Math.random()*LAST.length)]; }
+
+const CENARIOS={
+  gasolina:{min:4.0,max:9.0,step:0.1,item:'1 L de gasolina',labelP:'P (R$/litro)',labelQ:'Q (litros)'},
+  sorvetes:{min:3.0,max:18.0,step:0.5,item:'1 sorvete',labelP:'P (R$/unidade)',labelQ:'Q (unidades)'},
+  viagens:{min:800,max:8000,step:50,item:'1 pacote de viagem',labelP:'P (R$ por pacote)',labelQ:'Q (pacotes)'},
+  arroz:{min:15,max:45,step:0.5,item:'1 pacote de arroz (5kg)',labelP:'P (R$/pacote 5kg)',labelQ:'Q (pacotes)'},
+  roupas:{min:30,max:450,step:2,item:'1 peça de roupa',labelP:'P (R$/peça)',labelQ:'Q (peças)'}
+};
+
+function formatBRL(x){ try { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(x); } catch(e){ return 'R$ '+x.toFixed(2).replace('.',','); } }
+
+function genScenario(){
+  const sc=CENARIOS[cat.value];
+  const N=parseInt(n.value,10); nval.textContent=N;
+  // slider de preço conforme cenário
+  p.min=sc.min; p.max=sc.max; p.step=sc.step;
+  if(parseFloat(p.value)<sc.min||parseFloat(p.value)>sc.max) p.value=((sc.min+sc.max)/2).toFixed(2);
+  // dados plausíveis
+  DATA=Array.from({length:N},()=>({name:randName(),item:sc.item,v:+(sc.min+Math.random()*(sc.max-sc.min)).toFixed(2)}));
+  if(sortedDesc) DATA.sort((a,b)=>b.v-a.v);
+  draw();
+}
+
+function metrics(P){
+  const buyers=DATA.filter(d=>d.v>=P);
+  return {Q:buyers.length,CS:buyers.reduce((acc,d)=>acc+(d.v-P),0)};
+}
+
+function toPX(x,y,Qmax,Pmax){const W=canvas.width-pad.left-pad.right-140,H=canvas.height-pad.top-pad.bottom;return [pad.left+(x/Qmax)*W,pad.top+H-(y/Pmax)*H];}
+function line(x1,y1,x2,y2,clr,w=2,Qmax,Pmax){ctx.beginPath();const [x1p,y1p]=toPX(x1,y1,Qmax,Pmax),[x2p,y2p]=toPX(x2,y2,Qmax,Pmax);ctx.moveTo(x1p,y1p);ctx.lineTo(x2p,y2p);ctx.lineWidth=w;ctx.strokeStyle=clr;ctx.stroke();}
+function rectArea(x,w,vy,py,fill,stroke,Qmax,Pmax){const [x0,y0]=toPX(x,py,Qmax,Pmax),[x1,y1]=toPX(x+w,vy,Qmax,Pmax);ctx.fillStyle=fill;ctx.fillRect(x0,y1,x1-x0,y0-y1);if(stroke){ctx.strokeStyle=stroke;ctx.strokeRect(x0,y1,x1-x0,y0-y1);} }
+
+function draw(){
+  const sc=CENARIOS[cat.value];
+  const P=parseFloat(p.value); pval.textContent=formatBRL(P);
+  const maxV=Math.max(...DATA.map(d=>d.v),P);
+  const Qmax=Math.max(5,DATA.length+1);
+  // passo do eixo Y adaptativo
+  let stepY; if(cat.value==="viagens") stepY=1000; else if(maxV>100) stepY=50; else if(maxV>50) stepY=10; else stepY=1;
+  const Pmax=Math.max(8,Math.ceil((maxV+maxV*0.1)/stepY)*stepY);
+  QMAX=Qmax; PMAX=Pmax;
+
+  const {Q,CS}=metrics(P);
+  qOut.textContent=Q; csOut.textContent=formatBRL(CS);
+
+  // tabela e exemplo textual
+  tbody.innerHTML='';
+  let exampleText='Exemplo: —';
+  DATA.forEach((d)=>{
+    const buy=d.v>=P; const csi=Math.max(0,d.v-P);
+    const tr=document.createElement('tr'); if(buy) tr.classList.add('buy');
+    tr.innerHTML=`<td>${d.name}</td><td>${d.item}</td><td>${formatBRL(d.v)}</td><td>${buy?'Sim':'Não'}</td><td>${formatBRL(csi)}</td>`;
+    tbody.appendChild(tr);
+    if(exampleText==='Exemplo: —' && buy){ exampleText=`${d.name} está disposto a pagar ${formatBRL(d.v)}, mas ao pagar ${formatBRL(P)} ele tem um excedente de ${formatBRL(d.v)} − ${formatBRL(P)} = ${formatBRL(csi)}`; }
+  });
+  exampleBox.textContent=exampleText;
+
+  // === canvas ===
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // grid
+  for(let x=0;x<=Qmax;x++){line(x,0,x,Pmax,'#1f2937',1,Qmax,Pmax);} 
+  for(let y=0;y<=Pmax;y+=stepY){line(0,y,Qmax,y,'#1f2937',1,Qmax,Pmax);} 
+  // axes
+  line(0,0,Qmax,0,'#9ca3af',2,Qmax,Pmax); line(0,0,0,Pmax,'#9ca3af',2,Qmax,Pmax);
+  // ticks & labels
+  ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif'; ctx.textAlign='center';
+  for(let x=0;x<=Qmax;x++){ const [px,py]=toPX(x,0,Qmax,Pmax); ctx.fillText(String(x),px,py+16); }
+  ctx.save(); ctx.textAlign='right';
+  for(let y=0;y<=Pmax;y+=stepY){ const [px,py]=toPX(0,y,Qmax,Pmax); ctx.fillText(formatBRL(y), px-8, py+4); }
+  ctx.restore();
+
+  // demanda em escada
+  const sorted=DATA.slice().sort((a,b)=>b.v-a.v);
+  ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--dStroke')||'#60a5fa'; ctx.lineWidth=2.2;
+  let [x0,y0]=toPX(0,sorted[0]?.v||0,Qmax,Pmax); ctx.moveTo(x0,y0);
+  for(let i=0;i<sorted.length;i++){
+    const vi=sorted[i].v; let [xh,yh]=toPX(i+1,vi,Qmax,Pmax); ctx.lineTo(xh,yh);
+    const vnext = sorted[i+1]?.v ?? 0; let [xv,yv]=toPX(i+1,vnext,Qmax,Pmax); ctx.lineTo(xv,yv);
+  }
+  ctx.stroke();
+
+  // preço (por cima de CS)
+  line(0,P,Qmax,P,getComputedStyle(document.documentElement).getPropertyValue('--price')||'#fcd34d',2.4,Qmax,Pmax);
+
+  // CS retângulos + captura de áreas para tooltip
+  const csFill=getComputedStyle(document.documentElement).getPropertyValue('--csFill')||'rgba(99,102,241,.35)';
+  const csStroke=getComputedStyle(document.documentElement).getPropertyValue('--csStroke')||'#6366f1';
+  const csRects=[];
+  for(let i=0;i<sorted.length;i++){
+    const vi=sorted[i].v; if(vi>=P){ const csi=vi-P; rectArea(i,1,vi,P,csFill,csStroke,Qmax,Pmax);
+      const [rx0,ry0]=toPX(i,P,Qmax,Pmax), [rx1,ry1]=toPX(i+1,vi,Qmax,Pmax);
+      csRects.push({i, name:sorted[i].name, v:vi, P, CS:csi, x:rx0, y:ry1, w:rx1-rx0, h:ry0-ry1});
+      // chave { } ilustrando vᵢ − P
+      ctx.strokeStyle='#a78bfa'; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(rx0-6,ry1); ctx.lineTo(rx0-10,ry1); ctx.lineTo(rx0-10,ry0); ctx.lineTo(rx0-6,ry0); ctx.stroke();
+      // etiqueta CSi
+      ctx.fillStyle='#cbd5e1'; ctx.font='11px ui-sans-serif'; ctx.fillText('CS'+(i+1)+' = '+csi.toFixed(2), rx0+4, ry1+14);
+    } else break;
+  }
+
+  // CS total dentro do gráfico
+  ctx.fillStyle='#e5e7eb'; ctx.font='13px ui-sans-serif'; const [tx,ty]=toPX(Math.min(Q, Qmax-1)+0.2, Pmax-0.8, Qmax, Pmax); ctx.fillText('CS total = '+formatBRL(CS), tx, ty);
+  canvas.__csRects = csRects;
+
+  // labels dos eixos com unidades
+  const W=canvas.width-pad.left-pad.right-140, H=canvas.height-pad.top-pad.bottom;
+  ctx.textAlign='center'; ctx.fillText(sc.labelQ, pad.left+W/2, pad.top+H+40);
+  ctx.save(); ctx.translate(20, pad.top+H/2); ctx.rotate(-Math.PI/2); ctx.fillText(sc.labelP,0,0); ctx.restore();
+}
+
+// === Interações ===
+regen.addEventListener('click', genScenario);
+sortBtn.addEventListener('click', ()=>{ sortedDesc=!sortedDesc; sortBtn.textContent = sortedDesc? 'Ordenar valores (↓)' : 'Ordenar valores (↑)'; genScenario(); });
+cat.addEventListener('input', ()=>{ genScenario(); });
+n.addEventListener('input', ()=>{ nval.textContent = n.value; genScenario(); });
+p.addEventListener('input', ()=>{ draw(); });
+
+// Tooltip CSᵢ
+const tip=document.createElement('div'); tip.style.position='fixed'; tip.style.pointerEvents='none'; tip.style.background='rgba(2,6,23,.9)'; tip.style.color='#e5e7eb'; tip.style.border='1px solid #334155'; tip.style.padding='6px 8px'; tip.style.borderRadius='8px'; tip.style.font='12px ui-sans-serif'; tip.style.display='none'; document.body.appendChild(tip);
+canvas.addEventListener('mousemove',(e)=>{
+  const rect=canvas.getBoundingClientRect(); const scale=(window.devicePixelRatio||1);
+  const x=(e.clientX-rect.left)*scale, y=(e.clientY-rect.top)*scale; const boxes=canvas.__csRects||[];
+  let hit=null; for(const r of boxes){ if(x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h){ hit=r; break; } }
+  if(hit){ tip.style.display='block'; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px'; tip.innerHTML=`<strong>${hit.name}</strong><br>vᵢ = ${formatBRL(hit.v)}<br>P = ${formatBRL(hit.P)}<br><strong>CSᵢ = ${formatBRL(hit.CS)}</strong>`; } else { tip.style.display='none'; }
+});
+canvas.addEventListener('mouseleave',()=>{ tip.style.display='none'; });
+
+// Responsivo
+function resize(){ const rect=canvas.getBoundingClientRect(); const scale=window.devicePixelRatio||1; canvas.width=Math.max(760, Math.floor(rect.width*scale)); canvas.height=Math.max(520, Math.floor(rect.width*0.6*scale)); draw(); }
+new ResizeObserver(resize).observe(canvas);
+window.addEventListener('load', ()=>{ genScenario(); resize(); });
+</script>
+</body>
+</html>
