@@ -1,102 +1,253 @@
 <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preço Regulamentado — Teto/Piso, Escassez & Excesso</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--text:#e5e7eb;--line:#1f2937;--axis:#9ca3af;--grid:#1f2937;
+      --d:#93c5fd;--s:#86efac;--eq:#fde68a;--ctl:#fca5a5;
+      --shortage:rgba(244,63,94,.30);--surplus:rgba(59,130,246,.30);
+      --shortStroke:#f43f5e; --surpStroke:#3b82f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    header{padding:16px 20px;border-bottom:1px solid #0b1020}
+    header h1{margin:0;font-size:20px}
+    header .sub{color:var(--muted);font-size:12px}
+    main{display:grid;grid-template-columns:380px 1fr;gap:16px;padding:16px}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center;margin-top:8px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    select,input[type=range]{width:100%}
+    .val{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+    .metric{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:10px}
+    .metric .k{font-size:12px;color:var(--muted)}
+    .metric .v{font-variant-numeric:tabular-nums;font-weight:800}
+    .note{font-size:12px;color:#cbd5e1;margin-top:8px}
+    canvas{width:100%;height:100%;display:block;background:#0b1220;border-radius:14px}
+    .legend{display:flex;gap:14px;justify-content:center;margin-top:6px;color:#cbd5e1;font-size:12px;flex-wrap:wrap}
+    .dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+    .dot.d{background:#93c5fd;border:1px solid #60a5fa}
+    .dot.s{background:#86efac;border:1px solid #22c55e}
+    .dot.p{background:#fdba74;border:1px solid #fb923c}
+    .dot.sh{background:var(--shortage);border:1px solid var(--shortStroke)}
+    .dot.su{background:var(--surplus);border:1px solid var(--surpStroke)}
+    @media (max-width:980px){main{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Preço Regulamentado — Teto/Piso</h1>
+    <div class="sub">Varie um <strong>preço máximo (teto)</strong> ou <strong>preço mínimo (piso)</strong> e observe <strong>escassez</strong> (Qd &gt; Qs) ou <strong>excesso</strong> (Qs &gt; Qd) em relação ao equilíbrio.</div>
+  </header>
 
+  <main>
+    <section class="panel">
+      <div class="row">
+        <div>
+          <label for="mode">Regra do governo</label>
+          <select id="mode">
+            <option value="teto">Preço Máximo (Teto)</option>
+            <option value="piso">Preço Mínimo (Piso)</option>
+          </select>
+        </div>
+        <div class="val" id="modeDesc">Teto</div>
+      </div>
 
- // auto limites
- const qIntD = Math.max(6, Math.min(40, A/Math.max(0.2,B)));
- const qIntS = (C<0)? Math.max(6, Math.min(40, (-C)/Math.max(0.2,D))) : 12;
- Qmax = Math.max(8, Math.ceil(Math.max(qIntD,qIntS)/2)*2);
- Pmax = Math.max(8, Math.ceil(Math.max(A, C + D*Qmax, PC)*2)/2);
- pc.max = Pmax.toFixed(0);
+      <div class="row">
+        <div>
+          <label for="a">Demanda: intercepto (a) — P = a − b·Q</label>
+          <input id="a" type="range" min="5" max="15" step="0.1" value="9.0" />
+        </div>
+        <div class="val" id="aval">9.0</div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="b">Demanda: inclinação (b)</label>
+          <input id="b" type="range" min="0.3" max="2.0" step="0.1" value="1.0" />
+        </div>
+        <div class="val" id="bval">1.0</div>
+      </div>
 
+      <div class="row">
+        <div>
+          <label for="c">Oferta: intercepto (c) — P = c + d·Q</label>
+          <input id="c" type="range" min="0" max="5" step="0.1" value="1.0" />
+        </div>
+        <div class="val" id="cval">1.0</div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="d">Oferta: inclinação (d)</label>
+          <input id="d" type="range" min="0.3" max="2.0" step="0.1" value="1.0" />
+        </div>
+        <div class="val" id="dval">1.0</div>
+      </div>
 
- ctx.clearRect(0,0,canvas.width,canvas.height);
- // grid & axes
- for(let x=0;x<=Qmax;x++){ line(x,0,x,Pmax,'#1f2937',1); }
- for(let y=0;y<=Pmax;y++){ line(0,y,Qmax,y,'#1f2937',1); }
- line(0,0,Qmax,0,'#9ca3af',2.2); line(0,0,0,Pmax,'#9ca3af',2.2);
- // ticks
- ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif'; ctx.textAlign='center';
- for(let x=0;x<=Qmax;x++){ const [px,py]=toPX(x,0); ctx.fillText(x.toString(),px,py+16); }
- ctx.save(); ctx.textAlign='right'; for(let y=0;y<=Pmax;y++){ const [px,py]=toPX(0,y); ctx.fillText(y.toString(),px-8,py+4); } ctx.restore();
- // axis labels
- const W=canvas.width-pad.left-pad.right, H=canvas.height-pad.top-pad.bottom; ctx.textAlign='center'; ctx.fillText('Quantidade (Q)', pad.left+W/2, pad.top+H+38); ctx.save(); ctx.translate(18,pad.top+H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Preço (P)',0,0); ctx.restore();
+      <div class="row">
+        <div>
+          <label for="pc">Preço Regulamentado</label>
+          <input id="pc" type="range" min="0" max="12" step="0.01" value="5.00" />
+        </div>
+        <div class="val" id="pcval">5.00</div>
+      </div>
 
+      <div class="metrics" aria-live="polite">
+        <div class="metric"><div class="k">Equilíbrio (Q*, P*)</div><div class="v" id="eq">—</div></div>
+        <div class="metric"><div class="k">Com controle: Qd, Qs</div><div class="v" id="qvals">—</div></div>
+        <div class="metric"><div class="k">Situação</div><div class="v" id="status">—</div></div>
+        <div class="metric"><div class="k">Magnitude</div><div class="v" id="mag">—</div></div>
+      </div>
 
- // curvas
- line(0,A,Qmax, A-B*Qmax, '#a5b4fc',3); // demanda
- line(0,C,Qmax, C+D*Qmax, '#86efac',3); // oferta
+      <div class="note" id="explain">—</div>
+    </section>
 
+    <section class="panel">
+      <canvas id="chart" width="980" height="600" aria-label="Plano P×Q"></canvas>
+      <div class="legend">
+        <span><span class="dot d"></span> Demanda</span>
+        <span><span class="dot s"></span> Oferta</span>
+        <span><span class="dot p"></span> Preço regulado</span>
+        <span><span class="dot sh"></span> Escassez (Qd − Qs)</span>
+        <span><span class="dot su"></span> Excesso (Qs − Qd)</span>
+      </div>
+    </section>
+  </main>
 
- // equilíbrio
- const E = eq(A,B,C,D); eqEl.textContent = `Q*=${E.Q.toFixed(2)}, P*=${E.P.toFixed(2)}`;
- // ponto
- const [ex,ey]=toPX(E.Q,E.P); ctx.beginPath(); ctx.arc(ex,ey,4,0,2*Math.PI); ctx.fillStyle=varColor('--eq','#fde68a'); ctx.fill();
+  <script>
+    const $ = id => document.getElementById(id);
+    const mode=$('mode'), a=$('a'), b=$('b'), c=$('c'), d=$('d'), pc=$('pc');
+    const aval=$('aval'), bval=$('bval'), cval=$('cval'), dval=$('dval'), pcval=$('pcval');
+    const eqEl=$('eq'), qvals=$('qvals'), statusEl=$('status'), magEl=$('mag'), explain=$('explain'), modeDesc=$('modeDesc');
+    const canvas=$('chart'); const ctx=canvas.getContext('2d');
+    const pad={left:70,right:20,top:24,bottom:60}; let Qmax=12, Pmax=12;
 
+    function toPX(x,y){ const W=canvas.width-pad.left-pad.right-120; const H=canvas.height-pad.top-pad.bottom; return [pad.left+(x/Qmax)*W, pad.top+H-(y/Pmax)*H]; }
+    function line(x1,y1,x2,y2,clr,w=2){ ctx.beginPath(); const [x1p,y1p]=toPX(x1,y1); const [x2p,y2p]=toPX(x2,y2); ctx.moveTo(x1p,y1p); ctx.lineTo(x2p,y2p); ctx.lineWidth=w; ctx.strokeStyle=clr; ctx.stroke(); }
+    function text(txt,x,y,align='left'){ ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif'; ctx.textAlign=align; const [px,py]=toPX(x,y); ctx.fillText(txt,px,py); }
 
- // preço regulado
- line(0,PC,Qmax,PC, varColor('--ctl','#fb923c'), 2.4);
+    function eq(A,B,C,D){ const Q=(A-C)/(B+D); const P=A-B*Q; return {Q,P}; }
+    function Pd(A,B,Q){ return A-B*Q; } function Ps(C,D,Q){ return C+D*Q; }
+    function invD(A,B,P){ return (A-P)/B; } function invS(C,D,P){ return (P-C)/D; }
 
+    function draw(){
+      const A=parseFloat(a.value), B=parseFloat(b.value), C=parseFloat(c.value), D=parseFloat(d.value), PC=parseFloat(pc.value);
+      aval.textContent=A.toFixed(1); bval.textContent=B.toFixed(1); cval.textContent=C.toFixed(1); dval.textContent=D.toFixed(1); pcval.textContent=PC.toFixed(2);
+      modeDesc.textContent = mode.value==='teto' ? 'Teto' : 'Piso';
 
- // Quantidades a esse preço
- const Qd = Math.max(0, Math.min(Qmax, invD(A,B,PC)));
- const Qs = Math.max(0, Math.min(Qmax, invS(C,D,PC)));
- qvals.textContent = `Qd=${Qd.toFixed(2)}, Qs=${Qs.toFixed(2)}`;
+      // auto limites
+      const qIntD = Math.max(6, Math.min(40, A/Math.max(0.2,B)));
+      const qIntS = (C<0)? Math.max(6, Math.min(40, (-C)/Math.max(0.2,D))) : 12;
+      Qmax = Math.max(8, Math.ceil(Math.max(qIntD,qIntS)/2)*2);
+      Pmax = Math.max(8, Math.ceil(Math.max(A, C + D*Qmax, PC)*2)/2);
+      pc.max = Pmax.toFixed(0);
 
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // grid & axes
+      for(let x=0;x<=Qmax;x++){ line(x,0,x,Pmax,'#1f2937',1); }
+      for(let y=0;y<=Pmax;y++){ line(0,y,Qmax,y,'#1f2937',1); }
+      line(0,0,Qmax,0,'#9ca3af',2.2); line(0,0,0,Pmax,'#9ca3af',2.2);
+      // ticks
+      ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif'; ctx.textAlign='center';
+      for(let x=0;x<=Qmax;x++){ const [px,py]=toPX(x,0); ctx.fillText(x.toString(),px,py+16); }
+      ctx.save(); ctx.textAlign='right'; for(let y=0;y<=Pmax;y++){ const [px,py]=toPX(0,y); ctx.fillText(y.toString(),px-8,py+4); } ctx.restore();
+      // axis labels
+      const W=canvas.width-pad.left-pad.right-120, H=canvas.height-pad.top-pad.bottom; ctx.textAlign='center'; ctx.fillText('Quantidade (Q)', pad.left+W/2, pad.top+H+38); ctx.save(); ctx.translate(18,pad.top+H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Preço (P)',0,0); ctx.restore();
 
- // Situação
- let situacao = 'Não vinculante'; let mag = 0; let color=null;
- if(mode.value==='teto'){
- if(PC < E.P){ situacao = 'TETO VINCULANTE → ESCASSEZ'; mag = Math.max(0, Qd - Qs); color='shortage'; }
- else { situacao = 'TETO NÃO vinculante (mercado em P*)'; }
- } else { // piso
- if(PC > E.P){ situacao = 'PISO VINCULANTE → EXCESSO'; mag = Math.max(0, Qs - Qd); color='surplus'; }
- else { situacao = 'PISO NÃO vinculante (mercado em P*)'; }
- }
- statusEl.textContent = situacao; magEl.textContent = color? `${mag.toFixed(2)} unidades` : '—';
+      // curvas
+      line(0,A,Qmax, A-B*Qmax, '#a5b4fc',3); // demanda
+      line(0,C,Qmax, C+D*Qmax, '#86efac',3); // oferta
 
+      // equilíbrio
+      const E = eq(A,B,C,D); eqEl.textContent = `Q*=${E.Q.toFixed(2)}, P*=${E.P.toFixed(2)}`;
+      // ponto
+      const [ex,ey]=toPX(E.Q,E.P); ctx.beginPath(); ctx.arc(ex,ey,4,0,2*Math.PI); ctx.fillStyle=varColor('--eq','#fde68a'); ctx.fill();
 
- // Desenhar Qd e Qs no preço
- // Qd: interseção com demanda
- let [qdX,qdY] = toPX(Qd, PC); let [qsX,qsY] = toPX(Qs, PC);
- // linhas verticais
- line(Qd,0,Qd,PC,'#60a5fa',1.4); line(Qs,0,Qs,PC,'#22c55e',1.4);
- // marcadores
- drawTick(Qd,PC,'Qd'); drawTick(Qs,PC,'Qs');
+      // preço regulado
+      line(0,PC,Qmax,PC, varColor('--ctl','#fb923c'), 2.4);
 
+      // Quantidades a esse preço
+      const Qd = Math.max(0, Math.min(Qmax, invD(A,B,PC)));
+      const Qs = Math.max(0, Math.min(Qmax, invS(C,D,PC)));
+      qvals.textContent = `Qd=${Qd.toFixed(2)}, Qs=${Qs.toFixed(2)}`;
 
- // Faixa de escassez/excesso ao longo do preço
- if(color==='shortage' && Qd>Qs){ box(Qs, PC, Qd, PC, varColor('--shortage','rgba(244,63,94,.30)'),'#f43f5e'); }
- if(color==='surplus' && Qs>Qd){ box(Qd, PC, Qs, PC, varColor('--surplus','rgba(59,130,246,.30)'),'#3b82f6'); }
+      // Situação
+      let situacao = 'Não vinculante'; let mag = 0; let color=null; let labelBar='';
+      if(mode.value==='teto'){
+        if(PC < E.P){ situacao = 'TETO VINCULANTE → ESCASSEZ'; mag = Math.max(0, Qd - Qs); color='shortage'; labelBar='Escassez'; }
+        else { situacao = 'TETO NÃO vinculante (mercado em P*)'; }
+      } else { // piso
+        if(PC > E.P){ situacao = 'PISO VINCULANTE → EXCESSO'; mag = Math.max(0, Qs - Qd); color='surplus'; labelBar='Excesso'; }
+        else { situacao = 'PISO NÃO vinculante (mercado em P*)'; }
+      }
+      statusEl.textContent = situacao; magEl.textContent = color? `${mag.toFixed(2)} unidades` : '—';
 
+      // Desenhar Qd e Qs no preço
+      line(Qd,0,Qd,PC,'#60a5fa',1.4); line(Qs,0,Qs,PC,'#22c55e',1.4);
+      drawTick(Qd,PC,'Qd'); drawTick(Qs,PC,'Qs');
 
- // explicação
- explain.innerHTML = buildExplain(mode.value, PC, E.P, Qd, Qs);
- }
+      // Faixa de escassez/excesso ao longo do preço
+      if(color==='shortage' && Qd>Qs){ box(Qs, PC, Qd, PC, varColor('--shortage','rgba(244,63,94,.30)'),varColor('--shortStroke','#f43f5e')); }
+      if(color==='surplus' && Qs>Qd){ box(Qd, PC, Qs, PC, varColor('--surplus','rgba(59,130,246,.30)'),varColor('--surpStroke','#3b82f6')); }
 
+      // ==== BARRA VERTICAL DE MAGNITUDE (lado direito) ====
+      const sidebar = { x: canvas.width-110, y: pad.top+10, w: 90, h: canvas.height - pad.top - pad.bottom - 20 };
+      // moldura
+      ctx.save(); ctx.strokeStyle='#374151'; ctx.lineWidth=1; ctx.strokeRect(sidebar.x, sidebar.y, sidebar.w, sidebar.h);
+      ctx.fillStyle='#cbd5e1'; ctx.font='12px ui-sans-serif'; ctx.fillText('Magnitude', sidebar.x + sidebar.w/2, sidebar.y - 6);
+      // escala: altura cheia = Qmax
+      const scale = (sidebar.h - 30) / Math.max(Qmax, 1);
+      const h = mag * scale; const baseY = sidebar.y + sidebar.h - 12; const barW = 28; const cx = sidebar.x + sidebar.w/2 - barW/2;
+      if(color){
+        ctx.fillStyle = color==='shortage' ? varColor('--shortage','rgba(244,63,94,.30)') : varColor('--surplus','rgba(59,130,246,.30)');
+        ctx.fillRect(cx, baseY-h, barW, h);
+        ctx.strokeStyle = color==='shortage' ? varColor('--shortStroke','#f43f5e') : varColor('--surpStroke','#3b82f6');
+        ctx.lineWidth=1.6; ctx.strokeRect(cx, baseY-h, barW, h);
+        // rótulos
+        ctx.fillStyle='#e5e7eb'; ctx.font='12px ui-sans-serif';
+        ctx.fillText(`${labelBar}`, sidebar.x + sidebar.w/2, baseY - h - 8);
+        ctx.font='11px ui-sans-serif'; ctx.fillText(`${mag.toFixed(2)} un.`, sidebar.x + sidebar.w/2, baseY + 14);
+        // setinha indicando crescimento/diminuição ao mover o slider
+        if(typeof draw.lastMag === 'number'){
+          const delta = mag - draw.lastMag; const up = delta>0; const y = up ? (baseY-h-22) : (baseY-h+6);
+          ctx.beginPath(); ctx.moveTo(sidebar.x+sidebar.w-16, y); ctx.lineTo(sidebar.x+sidebar.w-16, y + (up?-10:10)); ctx.lineWidth=2; ctx.strokeStyle = up ? '#86efac' : '#fca5a5'; ctx.stroke();
+          ctx.beginPath(); const aY = up ? y-2 : y+12; ctx.moveTo(sidebar.x+sidebar.w-16, aY); ctx.lineTo(sidebar.x+sidebar.w-20, aY+(up?6:-6)); ctx.lineTo(sidebar.x+sidebar.w-12, aY+(up?6:-6)); ctx.closePath(); ctx.fillStyle = up ? '#86efac' : '#fca5a5'; ctx.fill();
+        }
+        draw.lastMag = mag;
+      } else {
+        // fantasma (não vinculante)
+        ctx.setLineDash([4,3]); ctx.strokeStyle='#64748b'; ctx.strokeRect(cx, baseY-(0), barW, 0);
+        ctx.setLineDash([]);
+      }
+      ctx.restore();
 
- function varColor(v, fallback){ const s=getComputedStyle(document.documentElement).getPropertyValue(v); return s && s.trim()? s.trim(): fallback; }
- function drawTick(Q,P,label){ const [x,y]=toPX(Q,P); ctx.fillStyle='#cbd5e1'; ctx.font='11px ui-sans-serif'; ctx.textAlign='center'; ctx.fillText(`${label}=${Q.toFixed(2)}`, x, y-6); }
- function box(q1,p1,q2,p2,fill,stroke){ const [x0,y0]=toPX(q1,p1); const [x1,y1]=toPX(q2,p2); ctx.fillStyle=fill; ctx.fillRect(x0, y1, x1-x0, y0-y1); ctx.strokeStyle=stroke; ctx.lineWidth=1.4; ctx.strokeRect(x0, y1, x1-x0, y0-y1); }
+      // explicação
+      explain.innerHTML = buildExplain(mode.value, PC, E.P, Qd, Qs) + (color? ` <br><em>A barra vertical à direita mostra |Qd − Qs| = <b>${mag.toFixed(2)}</b> (em unidades).</em>` : '');
+    }
 
+    function varColor(v, fallback){ const s=getComputedStyle(document.documentElement).getPropertyValue(v); return s && s.trim()? s.trim(): fallback; }
+    function drawTick(Q,P,label){ const [x,y]=toPX(Q,P); ctx.fillStyle='#cbd5e1'; ctx.font='11px ui-sans-serif'; ctx.textAlign='center'; ctx.fillText(`${label}=${Q.toFixed(2)}`, x, y-6); }
+    function box(q1,p1,q2,p2,fill,stroke){ const [x0,y0]=toPX(q1,p1); const [x1,y1]=toPX(q2,p2); ctx.fillStyle=fill; ctx.fillRect(x0, y1, x1-x0, y0-y1); ctx.strokeStyle=stroke; ctx.lineWidth=1.4; ctx.strokeRect(x0, y1, x1-x0, y0-y1); }
 
- function buildExplain(mode, PC, Pe, Qd, Qs){
- const f = (x)=> x.toFixed(2);
- if(mode==='teto'){
- if(PC < Pe) return `Como <b>teto</b> com P<sub>c</sub>=${f(PC)} < Pe*=${f(Pe)}, o preço não pode subir até P*. A ${f(PC)} temos <b>Qd=${f(Qd)}</b> e <b>Qs=${f(Qs)}</b>, gerando <b>escassez</b> de ${f(Qd-Qs)}.`;
- return `Teto em ${f(PC)} ≥ P*=${f(Pe)} é <b>não vinculante</b>: o mercado opera no equilíbrio.`;
- } else {
- if(PC > Pe) return `Como <b>piso</b> com P<sub>c</sub>=${f(PC)} > Pe*=${f(Pe)}, o preço não pode cair até P*. A ${f(PC)} temos <b>Qd=${f(Qd)}</b> e <b>Qs=${f(Qs)}</b>, gerando <b>excesso</b> de ${f(Qs-Qd)}.`;
- return `Piso em ${f(PC)} ≤ P*=${f(Pe)} é <b>não vinculante</b>: o mercado opera no equilíbrio.`;
- }
- }
+    function buildExplain(mode, PC, Pe, Qd, Qs){
+      const f = (x)=> x.toFixed(2);
+      if(mode==='teto'){
+        if(PC < Pe) return `Como <b>teto</b> com P<sub>c</sub>=${f(PC)} < P*=${f(Pe)}, o preço não pode subir até P*. A ${f(PC)} temos <b>Qd=${f(Qd)}</b> e <b>Qs=${f(Qs)}</b>, gerando <b>escassez</b> de ${f(Qd-Qs)}.`;
+        return `Teto em ${f(PC)} ≥ P*=${f(Pe)} é <b>não vinculante</b>: o mercado opera no equilíbrio.`;
+      } else {
+        if(PC > Pe) return `Como <b>piso</b> com P<sub>c</sub>=${f(PC)} > P*=${f(Pe)}, o preço não pode cair até P*. A ${f(PC)} temos <b>Qd=${f(Qd)}</b> e <b>Qs=${f(Qs)}</b>, gerando <b>excesso</b> de ${f(Qs-Qd)}.`;
+        return `Piso em ${f(PC)} ≤ P*=${f(Pe)} é <b>não vinculante</b>: o mercado opera no equilíbrio.`;
+      }
+    }
 
+    function resize(){ const rect=canvas.getBoundingClientRect(); const scale=window.devicePixelRatio||1; canvas.width=Math.max(760, Math.floor(rect.width*scale)); canvas.height=Math.max(520, Math.floor(rect.width*0.6*scale)); draw(); }
+    new ResizeObserver(resize).observe(canvas);
 
- function resize(){ const rect=canvas.getBoundingClientRect(); const scale=window.devicePixelRatio||1; canvas.width=Math.max(760, Math.floor(rect.width*scale)); canvas.height=Math.max(520, Math.floor(rect.width*0.6*scale)); draw(); }
- new ResizeObserver(resize).observe(canvas);
-
-
- [mode,a,b,c,d,pc].forEach(el=> el.addEventListener('input', draw));
- window.addEventListener('load', resize);
- </script>
+    [mode,a,b,c,d,pc].forEach(el=> el.addEventListener('input', draw));
+    window.addEventListener('load', resize);
+  </script>
 </body>
 </html>
