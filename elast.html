@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Elasticidade — Ponto Médio & Pontual</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#0b1220;--ink:#e5e7eb;--muted:#94a3b8;--line:#1f2937;
+    --d:#60a5fa;--s:#22c55e;--sec:#f59e0b;--p1:#fca5a5;--p2:#93c5fd;--pt:#fde68a
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    display:grid;grid-template-rows:auto auto auto 1fr
+  }
+  header{padding:10px 12px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:16px}
+
+  /* ALERTA */
+  .alert{
+    display:flex;gap:10px;align-items:center;
+    padding:8px 12px;border-bottom:1px solid var(--line);
+    background:rgba(245,158,11,.08);
+    color:#fde68a;font-size:12px
+  }
+  .alert .icon{font-size:14px;line-height:1}
+  .alert b{color:#fff}
+
+  .controls{display:grid;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .box{border:1px solid var(--line);border-radius:10px;padding:10px;background:#0c1222}
+  strong{font-size:12px}
+  label{display:block;font-size:11px;color:var(--muted);margin:6px 0 4px}
+  input[type=range]{width:100%}
+  .val{font-variant-numeric:tabular-nums;text-align:right;font-size:11px;color:#cbd5e1}
+  button.small{cursor:pointer;background:#111827;border:1px solid var(--line);color:#e5e7eb;padding:4px 8px;border-radius:8px;font-size:11px}
+
+  /* mola */
+  .springCtrl{display:grid;grid-template-columns:1fr 160px;gap:8px;align-items:center;margin-top:6px}
+  .springWrap{background:#0b1220;border:1px solid var(--line);border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center}
+  svg.spring{width:150px;height:36px;display:block}
+  .hint{display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:2px}
+
+  /* método */
+  .methodRow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{padding:6px 10px;background:#0b1220;color:#e5e7eb;border:0;font-size:12px}
+  .seg button.active{background:#111827}
+  select{background:#0b1220;border:1px solid var(--line);color:#e5e7eb;border-radius:8px;padding:6px;font-size:12px}
+
+  /* painéis */
+  main{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;grid-template-rows:auto 1fr auto;gap:6px}
+  h2{margin:0 0 4px;font-size:14px}
+  canvas{width:100%;height:100%;background:#0b1220;border-radius:10px;display:block}
+
+  .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .chip{background:#0b1220;border:1px solid var(--line);border-radius:8px;padding:6px}
+  .k{font-size:10px;color:#94a3b8}
+  .v{font-variant-numeric:tabular-nums;font-weight:700;font-size:11px}
+
+  .legend{display:flex;gap:10px;justify-content:center;color:#cbd5e1;font-size:11px;flex-wrap:wrap}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .dot.d{background:var(--d)} .dot.s{background:var(--s)} .dot.sec{background:var(--sec)}
+  .dot.p1{background:var(--p1)} .dot.p2{background:var(--p2)}
+
+  @media (max-width:980px){main{grid-template-columns:1fr} .row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <header><h1>Elasticidade — Ponto Médio & Pontual</h1></header>
+
+  <!-- ALERTA -->
+  <div id="alert" class="alert" role="status" aria-live="polite">
+    <span class="icon">⚠️</span>
+    <span id="alertText">As elasticidades são calculadas pelo <b>método do ponto médio</b> (arc): <b>ε = (ΔQ/ Q̄) ÷ (ΔP/ P̄)</b>.</span>
+  </div>
+
+  <section class="controls">
+    <div class="row">
+      <!-- preços -->
+      <div class="box">
+        <strong>Preços P1 e P2</strong>
+        <label>Arraste para ver variações (inteiras)</label>
+        <div style="display:grid;grid-template-columns:1fr 56px;gap:6px;align-items:center;margin-top:4px">
+          <input id="p1" type="range" min="1" max="40" step="1" value="8"><div class="val" id="p1v">P1 = 8</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 56px;gap:6px;align-items:center;margin-top:4px">
+          <input id="p2" type="range" min="1" max="40" step="1" value="12"><div class="val" id="p2v">P2 = 12</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-top:6px">
+          <div><label for="dP"><b>ΔP</b> (variação de preço)</label><input id="dP" type="range" min="1" max="20" step="1" value="4"></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px"><input id="lockDelta" type="checkbox" checked> Travar (P2 = P1 + ΔP)</label>
+          <button id="swapBtn" type="button" class="small">Inverter P1↔P2</button>
+        </div>
+      </div>
+
+      <!-- Demanda: slider + mola -->
+      <div class="box">
+        <strong>Demanda — escolha a “elasticidade”</strong>
+        <label for="dShape">Inclinação (centro fixo)</label>
+        <div class="springCtrl">
+          <input id="dShape" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Elasticidade da Demanda">
+          <div class="springWrap"><svg id="springD" class="spring" viewBox="0 0 150 36" aria-hidden="true"></svg></div>
+        </div>
+        <div class="hint"><span>mais elástica</span><span id="dShapeVal">intermediária</span><span>mais inelástica</span></div>
+      </div>
+
+      <!-- Oferta: slider + mola -->
+      <div class="box">
+        <strong>Oferta — escolha a “elasticidade”</strong>
+        <label for="sShape">Inclinação (centro fixo)</label>
+        <div class="springCtrl">
+          <input id="sShape" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Elasticidade da Oferta">
+          <div class="springWrap"><svg id="springS" class="spring" viewBox="0 0 150 36" aria-hidden="true"></svg></div>
+        </div>
+        <div class="hint"><span>mais elástica</span><span id="sShapeVal">intermediária</span><span>mais inelástica</span></div>
+      </div>
+    </div>
+
+    <!-- MÉTODO -->
+    <div class="box methodRow">
+      <div><strong>Método de cálculo</strong></div>
+      <div class="seg" role="tablist" aria-label="Método de elasticidade">
+        <button id="btnMid" class="active" aria-selected="true">Ponto médio</button>
+        <button id="btnPoint" aria-selected="false">No ponto</button>
+      </div>
+      <div>
+        <label for="pointAt">Ponto da elasticidade (modo “no ponto”)</label>
+        <select id="pointAt">
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="MID" selected>Meio (P̄,Q̄)</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <section class="panel">
+      <h2>Demanda (Q em função de P)</h2>
+      <canvas id="canvasD" width="760" height="430" aria-label="Plano P×Q — Demanda"></canvas>
+      <div class="metrics" id="metricsD">
+        <div class="chip"><div class="k" id="k1d">ΔQ/ΔP (secante)</div><div class="v" id="dSlope">—</div></div>
+        <div class="chip"><div class="k" id="k2d">Médias Q̄, P̄</div><div class="v" id="dMeans">—</div></div>
+        <div class="chip"><div class="k">Elasticidade εᵈ</div><div class="v" id="dElas">—</div></div>
+      </div>
+      <div class="legend">
+        <span><span class="dot d"></span> Demanda</span>
+        <span><span class="dot sec"></span> Secante (P1,P2)</span>
+        <span><span class="dot p1"></span> P1</span>
+        <span><span class="dot p2"></span> P2</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Oferta (Q em função de P)</h2>
+      <canvas id="canvasS" width="760" height="430" aria-label="Plano P×Q — Oferta"></canvas>
+      <div class="metrics" id="metricsS">
+        <div class="chip"><div class="k" id="k1s">ΔQ/ΔP (secante)</div><div class="v" id="sSlope">—</div></div>
+        <div class="chip"><div class="k" id="k2s">Médias Q̄, P̄</div><div class="v" id="sMeans">—</div></div>
+        <div class="chip"><div class="k">Elasticidade εˢ</div><div class="v" id="sElas">—</div></div>
+      </div>
+      <div class="legend">
+        <span><span class="dot s"></span> Oferta</span>
+        <span><span class="dot sec"></span> Secante (P1,P2)</span>
+        <span><span class="dot p1"></span> P1</span>
+        <span><span class="dot p2"></span> P2</span>
+      </div>
+    </section>
+  </main>
+
+<script>
+/* ===== Helpers ===== */
+const $ = (id)=>document.getElementById(id);
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || name;
+const resolveColor = (spec) => { const m=/^var\((--[^)]+)\)$/.exec(spec); return m ? cssVar(m[1]) : spec; };
+const int = (x)=>Math.round(+x);
+
+/* Controles */
+const p1=$('p1'), p1v=$('p1v');
+const p2=$('p2'), p2v=$('p2v');
+const dP=$('dP'), lockDelta=$('lockDelta'), swapBtn=$('swapBtn');
+const dShape=$('dShape'), dShapeVal=$('dShapeVal');
+const sShape=$('sShape'), sShapeVal=$('sShapeVal');
+const btnMid=$('btnMid'), btnPoint=$('btnPoint'), pointAt=$('pointAt');
+const alertText=$('alertText');
+
+/* Mola SVG */
+const springD=$('springD'), springS=$('springS');
+function drawSpring(svgEl, t){
+  const w=150, h=36, mid=h/2;
+  const coils = 4 + Math.round(t*10);
+  const amp   = 4 + (1 - t)*8;
+  const pts=[], steps=coils*12;
+  for(let i=0;i<=steps;i++){
+    const x=(i/steps)*w, y=mid + Math.sin(i/coils*Math.PI*2)*amp;
+    pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+  }
+  svgEl.innerHTML = `
+    <polyline fill="none" stroke="${resolveColor('var(--ink)')}" stroke-opacity="0.18" stroke-width="8" points="${pts.join(' ')}" stroke-linecap="round"/>
+    <polyline fill="none" stroke="${resolveColor('var(--sec)')}" stroke-width="2.2" points="${pts.join(' ')}" stroke-linecap="round"/>
+  `;
+}
+
+/* Canvas & Métricas */
+const cD=$('canvasD'), cS=$('canvasS');
+const ctxD=cD.getContext('2d'), ctxS=cS.getContext('2d');
+const dSlope=$('dSlope'), dMeans=$('dMeans'), dElas=$('dElas');
+const sSlope=$('sSlope'), sMeans=$('sMeans'), sElas=$('sElas');
+const k1d=$('k1d'), k2d=$('k2d'), k1s=$('k1s'), k2s=$('k2s');
+
+/* Escala e padding do plano */
+const QMAX=40, PMAX=40, QMID=QMAX/2, PMID=PMAX/2;
+const PAD={left:52,right:16,top:16,bottom:40};
+
+/* Forma (sliders) */
+let B=2.0, Dp=2.0; // Demanda: Q = a - B*P ; Oferta: Q = -c + Dp*P
+
+/* Método */
+let method='midpoint'; // 'midpoint' | 'point'
+const SLOPE_MIN = 0.3, SLOPE_MAX = 6.0;
+const mapSliderToSlopeQ = (v) => SLOPE_MIN + (SLOPE_MAX - SLOPE_MIN) * (1 - v);
+
+/* Classificação por |dP/dQ| */
+function labelFromSlope(abs_dPdQ){
+  if (abs_dPdQ <= 0.25) return 'muito elástica';
+  if (abs_dPdQ <= 0.60) return 'elástica';
+  if (abs_dPdQ <= 1.50) return 'intermediária';
+  if (abs_dPdQ <= 3.50) return 'inelástica';
+  return 'muito inelástica';
+}
+
+/* Atualiza sliders e textos */
+function updateFromSliders(){
+  let p1Val = int(p1.value), d = int(dP.value);
+  if (lockDelta.checked){
+    let p2Val = p1Val + d;
+    const pmax = +p1.max, pmin = +p1.min;
+    if(p2Val > pmax){ p1Val = Math.max(pmin, pmax - d); p2Val = p1Val + d; }
+    p1.value = p1Val; p2.value = p2Val; p2.disabled = true;
+  } else { p2.value = int(p2.value); p2.disabled = false; }
+  p1v.textContent = "P1 = " + p1.value;
+  p2v.textContent = "P2 = " + p2.value;
+
+  B  = mapSliderToSlopeQ(+dShape.value);
+  Dp = mapSliderToSlopeQ(+sShape.value);
+
+  dShapeVal.textContent = labelFromSlope(Math.abs(1/B));
+  sShapeVal.textContent = labelFromSlope(Math.abs(1/Dp));
+
+  drawSpring(springD, +dShape.value);
+  drawSpring(springS, +sShape.value);
+}
+
+/* Parâmetros centrados */
+function demandParams(){ const a = QMID + B*PMID; return {a,b:B}; }
+function supplyParams(){ const c = Dp*PMID - QMID; return {c,d:Dp}; }
+
+/* Q(P) discretos */
+function Qd(P){ const p=demandParams(); return Math.max(0, Math.round(p.a - p.b*P)); }
+function Qs(P){ const p=supplyParams(); return Math.max(0, Math.round(-p.c + p.d*P)); }
+
+/* Elasticidade — ponto médio */
+function elasMid(Q1,Q2,P1,P2){
+  const dQ=Q2-Q1, dPin=P2-P1, Qm=(Q1+Q2)/2, Pm=(P1+P2)/2;
+  if(Qm<=0 || Pm<=0 || dPin===0) return {e:null,dQ,dPin,Qm,Pm};
+  const num=dQ/Qm, den=dPin/Pm;
+  return {e:num/den, dQ, dPin, Qm, Pm, num, den};
+}
+/* Elasticidade — pontual em (P*,Q*) */
+function elasPoint_linear_demand(Pstar,Qstar){ // dQ/dP = -B
+  if(Qstar<=0) return {e:null, dQdP:-B, Pstar, Qstar};
+  return {e:(-B)*(Pstar/Qstar), dQdP:-B, Pstar, Qstar};
+}
+function elasPoint_linear_supply(Pstar,Qstar){ // dQ/dP = +Dp
+  if(Qstar<=0) return {e:null, dQdP:Dp, Pstar, Qstar};
+  return {e:(Dp)*(Pstar/Qstar), dQdP:Dp, Pstar, Qstar};
+}
+function classify(e){ if(e===null) return '—'; const a=Math.abs(e); if(Math.abs(a-1)<1e-6) return 'unitária'; return a>1?'elástica':'inelástica'; }
+
+/* Plot helpers */
+function makePlotters(ctx){
+  function toPX(Q,P){
+    const W=ctx.canvas.width-PAD.left-PAD.right, H=ctx.canvas.height-PAD.top-PAD.bottom;
+    return [PAD.left+(Q/QMAX)*W, PAD.top+H-(P/PMAX)*H];
+  }
+  function lineQ(Q1,P1,Q2,P2,clr,w){
+    ctx.beginPath(); const a=toPX(Q1,P1), b=toPX(Q2,P2);
+    ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.lineWidth=w||2; ctx.strokeStyle=resolveColor(clr); ctx.stroke();
+  }
+  function axes(){
+    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    for(let q=0;q<=QMAX;q+=5) lineQ(q,0,q,PMAX,'#1f2937',1);
+    for(let p=0;p<=PMAX;p+=5) lineQ(0,p,QMAX,p,'#1f2937',1);
+    lineQ(0,0,QMAX,0,'#9ca3af',2); lineQ(0,0,0,PMAX,'#9ca3af',2);
+    ctx.fillStyle='#e5e7eb'; ctx.font='10px ui-sans-serif'; ctx.textAlign='center';
+    for(let q=0;q<=QMAX;q+=5){ const t=toPX(q,0); ctx.fillText(String(q), t[0], t[1]+14); }
+    ctx.save(); ctx.textAlign='right'; for(let p=0;p<=PMAX;p+=5){ const t=toPX(0,p); ctx.fillText(String(p), t[0]-6, t[1]+4); } ctx.restore();
+    const W=ctx.canvas.width-PAD.left-PAD.right, H=ctx.canvas.height-PAD.top-PAD.bottom;
+    ctx.textAlign='center'; ctx.fillText('Quantidade (Q)', PAD.left+W/2, PAD.top+H+30);
+    ctx.save(); ctx.translate(14, PAD.top+H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Preço (P)', 0, 0); ctx.restore();
+  }
+  function point(Q,P,stroke){
+    const t=toPX(Q,P); ctx.beginPath(); ctx.arc(t[0],t[1],3.5,0,2*Math.PI);
+    ctx.fillStyle=resolveColor('var(--pt)'); ctx.fill(); ctx.strokeStyle=resolveColor(stroke||'#fff'); ctx.lineWidth=1.8; ctx.stroke();
+  }
+  return {toPX,lineQ,axes,point};
+}
+const plotD = makePlotters(ctxD);
+const plotS = makePlotters(ctxS);
+
+/* Projeções e rótulos nos eixos */
+function drawDashed(ctx, x1,y1,x2,y2, color, width=1.5, dash=[5,5]){
+  ctx.save(); ctx.setLineDash(dash); ctx.lineWidth=width; ctx.strokeStyle=resolveColor(color);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+}
+function drawAxisBubble(ctx, text, x, y){
+  const padX=6, padY=3, r=6, font='12px ui-sans-serif';
+  ctx.save(); ctx.font=font; ctx.textBaseline='middle'; ctx.textAlign='center';
+  const w=ctx.measureText(text).width + padX*2, h=18, x0=Math.round(x - w/2), y0=Math.round(y - h/2);
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.strokeStyle='rgba(255,255,255,0.20)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x0+r,y0);
+  ctx.arcTo(x0+w,y0,x0+w,y0+h,r); ctx.arcTo(x0+w,y0+h,x0,y0+h,r);
+  ctx.arcTo(x0,y0+h,x0,y0,r);     ctx.arcTo(x0,y0,x0+w,y0,r);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#e5e7eb'; ctx.fillText(text, x0+w/2, y0+h/2+0.5);
+  ctx.restore();
+}
+function drawProjections(ctx, plotter, Q, P, color, tag){
+  const [xP,yP]=plotter.toPX(Q,P), [xQ,y0]=plotter.toPX(Q,0), [x0,yY]=plotter.toPX(0,P);
+  drawDashed(ctx, xP,yP, xQ,y0, color); // até eixo x (Q)
+  drawDashed(ctx, xP,yP, x0,yY, color); // até eixo y (P)
+  drawAxisBubble(ctx, `${tag}: Q=${Q}`, xQ, y0 + 14);
+  drawAxisBubble(ctx, `${tag}: P=${P}`, x0 + 28, yY);
+}
+
+/* Caixa de fórmula */
+function drawFormulaBoxAtCoord(ctx, plotter, lines, Q, P, offset={dx:0,dy:0}){
+  ctx.save();
+  const fontSize=14, lineHeight=18, padX=10, padY=8;
+  ctx.font=`${fontSize}px ui-sans-serif`; ctx.textBaseline='top'; ctx.textAlign='left';
+  const widths=lines.map(t=>ctx.measureText(t).width), innerW=Math.max(...widths);
+  const w=innerW + padX*2, h=lines.length*lineHeight + padY*2;
+  let [x,y]=plotter.toPX(Q,P); x+=(offset.dx||0); y+=(offset.dy||0);
+  x=Math.min(Math.max(x, PAD.left+6), ctx.canvas.width-PAD.right-w-6);
+  y=Math.min(Math.max(y, PAD.top +6), ctx.canvas.height-PAD.bottom-h-6);
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1;
+  const r=8, x0=x, y0=y;
+  ctx.beginPath(); ctx.moveTo(x0+r,y0);
+  ctx.arcTo(x0+w,y0,x0+w,y0+h,r); ctx.arcTo(x0+w,y0+h,x0,y0+h,r);
+  ctx.arcTo(x0,y0+h,x0,y0,r);     ctx.arcTo(x0,y0,x0+w,y0,r);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#e5e7eb';
+  for(let i=0;i<lines.length;i++) ctx.fillText(lines[i], x0+padX, y0+padY+i*lineHeight);
+  ctx.restore();
+}
+
+/* Demanda */
+function drawDemand(){
+  const ctx = ctxD, plot = plotD;
+  plot.axes();
+  const p=demandParams(), a=p.a, b=p.b; // P = (a - Q)/b
+  plot.lineQ(0, a/b, QMAX, (a-QMAX)/b, 'var(--d)', 2.4);
+
+  const P1=int(p1.value), P2=int(p2.value);
+  const Q1=Qd(P1), Q2=Qd(P2);
+
+  plot.point(Q1,P1,'var(--p1)'); plot.point(Q2,P2,'var(--p2)');
+  plot.lineQ(Q1,P1,Q2,P2,'var(--sec)',2);
+
+  drawProjections(ctx, plot, Q1, P1, 'var(--p1)', 'P1');
+  drawProjections(ctx, plot, Q2, P2, 'var(--p2)', 'P2');
+
+  if(method==='midpoint'){
+    const {e,dQ,dPin,Qm,Pm,num,den} = elasMid(Q1,Q2,P1,P2);
+    dSlope.textContent = dQ + " / " + dPin;
+    dMeans.textContent = "Q̄=" + Qm.toFixed(2) + ", P̄=" + Pm.toFixed(2);
+    dElas.textContent  = (e===null? '—' : e.toFixed(3) + " (" + classify(e) + ")");
+    k1d.textContent="ΔQ/ΔP (secante)"; k2d.textContent="Médias Q̄, P̄";
+    const lines = (e===null)
+      ? ["εᵈ = (ΔQ/Q̄) / (ΔP/P̄)",
+         `= (${dQ} / ${Qm.toFixed(2)}) / (${dPin} / ${Pm.toFixed(2)})`,
+         `= — (indefinida)`]
+      : ["εᵈ = (ΔQ/Q̄) / (ΔP/P̄)",
+         `= (${dQ} / ${Qm.toFixed(2)}) / (${dPin} / ${Pm.toFixed(2)})`,
+         `= ${(num/den).toFixed(3)} (${classify(e)})`];
+    drawFormulaBoxAtCoord(ctx, plot, lines, QMAX*0.75, PMAX*0.9);
+  } else {
+    // ponto: escolher P*,Q*
+    let Pstar, Qstar, tag = pointAt.value;
+    if(tag==='P1'){ Pstar=P1; Qstar=Q1; }
+    else if(tag==='P2'){ Pstar=P2; Qstar=Q2; }
+    else { Pstar=(P1+P2)/2; Qstar=(Q1+Q2)/2; tag='P̄'; }
+    const {e, dQdP} = elasPoint_linear_demand(Pstar,Qstar);
+    dSlope.textContent = (dQdP).toFixed(3); // dQ/dP
+    dMeans.textContent = `P*=${Pstar.toFixed(2)}, Q*=${Qstar.toFixed(2)}`;
+    dElas.textContent  = (e===null? '—' : e.toFixed(3) + " (" + classify(e) + ")");
+    k1d.textContent="dQ/dP (no ponto)"; k2d.textContent="P*, Q* (ponto)";
+    const lines = (e===null)
+      ? ["εᵈ = (dQ/dP) · (P*/Q*)",
+         `= (${dQdP.toFixed(3)}) · (${Pstar.toFixed(2)} / ${Qstar.toFixed(2)})`,
+         `= — (indefinida)`]
+      : ["εᵈ = (dQ/dP) · (P*/Q*)",
+         `= (${dQdP.toFixed(3)}) · (${Pstar.toFixed(2)} / ${Qstar.toFixed(2)})`,
+         `= ${e.toFixed(3)} (${classify(e)})`];
+    drawFormulaBoxAtCoord(ctx, plot, lines, QMAX*0.75, PMAX*0.9);
+  }
+}
+
+/* Oferta */
+function drawSupply(){
+  const ctx = ctxS, plot = plotS;
+  plot.axes();
+  const p=supplyParams(), c=p.c, d=p.d; // P = (Q + c)/d
+  plot.lineQ(0, (c)/d, QMAX, (QMAX + c)/d, 'var(--s)', 2.4);
+
+  const P1=int(p1.value), P2=int(p2.value);
+  const Q1=Qs(P1), Q2=Qs(P2);
+
+  plot.point(Q1,P1,'var(--p1)'); plot.point(Q2,P2,'var(--p2)');
+  plot.lineQ(Q1,P1,Q2,P2,'var(--sec)',2);
+
+  drawProjections(ctx, plot, Q1, P1, 'var(--p1)', 'P1');
+  drawProjections(ctx, plot, Q2, P2, 'var(--p2)', 'P2');
+
+  if(method==='midpoint'){
+    const {e,dQ,dPin,Qm,Pm,num,den} = elasMid(Q1,Q2,P1,P2);
+    sSlope.textContent = dQ + " / " + dPin;
+    sMeans.textContent = "Q̄=" + Qm.toFixed(2) + ", P̄=" + Pm.toFixed(2);
+    sElas.textContent  = (e===null? '—' : e.toFixed(3) + " (" + classify(e) + ")");
+    k1s.textContent="ΔQ/ΔP (secante)"; k2s.textContent="Médias Q̄, P̄";
+    const lines = (e===null)
+      ? ["εˢ = (ΔQ/Q̄) / (ΔP/P̄)",
+         `= (${dQ} / ${Qm.toFixed(2)}) / (${dPin} / ${Pm.toFixed(2)})`,
+         `= — (indefinida)`]
+      : ["εˢ = (ΔQ/Q̄) / (ΔP/P̄)",
+         `= (${dQ} / ${Qm.toFixed(2)}) / (${dPin} / ${Pm.toFixed(2)})`,
+         `= ${(num/den).toFixed(3)} (${classify(e)})`];
+    drawFormulaBoxAtCoord(ctx, plot, lines, QMAX*0.75, PMAX*0.9);
+  } else {
+    let Pstar, Qstar, tag = pointAt.value;
+    if(tag==='P1'){ Pstar=P1; Qstar=Q1; }
+    else if(tag==='P2'){ Pstar=P2; Qstar=Q2; }
+    else { Pstar=(P1+P2)/2; Qstar=(Q1+Q2)/2; tag='P̄'; }
+    const {e, dQdP} = elasPoint_linear_supply(Pstar,Qstar);
+    sSlope.textContent = (dQdP).toFixed(3);
+    sMeans.textContent = `P*=${Pstar.toFixed(2)}, Q*=${Qstar.toFixed(2)}`;
+    sElas.textContent  = (e===null? '—' : e.toFixed(3) + " (" + classify(e) + ")");
+    k1s.textContent="dQ/dP (no ponto)"; k2s.textContent="P*, Q* (ponto)";
+    const lines = (e===null)
+      ? ["εˢ = (dQ/dP) · (P*/Q*)",
+         `= (${dQdP.toFixed(3)}) · (${Pstar.toFixed(2)} / ${Qstar.toFixed(2)})`,
+         `= — (indefinida)`]
+      : ["εˢ = (dQ/dP) · (P*/Q*)",
+         `= (${dQdP.toFixed(3)}) · (${Pstar.toFixed(2)} / ${Qstar.toFixed(2)})`,
+         `= ${e.toFixed(3)} (${classify(e)})`];
+    drawFormulaBoxAtCoord(ctx, plot, lines, QMAX*0.75, PMAX*0.9);
+  }
+}
+
+/* Orquestração */
+function updateAlert(){
+  if(method==='midpoint'){
+    alertText.innerHTML = 'As elasticidades são calculadas pelo <b>método do ponto médio</b> (arc): <b>ε = (ΔQ/ Q̄) ÷ (ΔP/ P̄)</b>.';
+    pointAt.disabled = true;
+  } else {
+    alertText.innerHTML = 'As elasticidades são calculadas <b>no ponto</b>: <b>ε = (dQ/dP) · (P*/Q*)</b>. Escolha o ponto em <b>P1</b>, <b>P2</b> ou <b>Meio</b>.';
+    pointAt.disabled = false;
+  }
+}
+function drawAll(){ updateFromSliders(); updateAlert(); drawDemand(); drawSupply(); }
+
+/* Eventos */
+window.addEventListener('load', drawAll);
+[p1,p2,dP,dShape,sShape,lockDelta,pointAt].forEach(el=> el.addEventListener('input', drawAll));
+swapBtn.addEventListener('click', ()=>{ const t=p1.value; p1.value=p2.value; p2.value=t; drawAll(); });
+
+btnMid.addEventListener('click', ()=>{ method='midpoint'; btnMid.classList.add('active'); btnPoint.classList.remove('active'); drawAll(); });
+btnPoint.addEventListener('click', ()=>{ method='point'; btnPoint.classList.add('active'); btnMid.classList.remove('active'); drawAll(); });
+</script>
+</body>
+</html>
