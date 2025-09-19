@@ -6,101 +6,254 @@
   <title>Índice — Simuladores de Oferta & Demanda</title>
   <style>
     :root{
-      --bg:#0f172a;--card:#0b1220;--ink:#e5e7eb;--muted:#a3a3a3;--line:#1f2937;
-      --accent:#60a5fa;--accent2:#22c55e;--warn:#f59e0b
+      --bg:#0b1020; --bg2:#0f172a; --card:#0b1220; --ink:#e5e7eb; --muted:#a3b0c2; --line:#1e293b;
+      --accent:#60a5fa; --accent2:#22c55e; --warn:#f59e0b; --pink:#e879f9; --shadow: rgba(2,6,23,.35);
+      --focus:#93c5fd;
     }
     *{box-sizing:border-box}
-    body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; color:var(--ink); background:linear-gradient(180deg,#0b1020,#0f172a 55%); min-height:100vh; display:grid; grid-template-rows:auto 1fr auto}
-    header{padding:22px 20px; border-bottom:1px solid var(--line)}
-    header h1{margin:0; font-size:22px}
-    main{padding:20px}
-    .grid{display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:16px}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1e3a8a33 0%, transparent 60%),
+        radial-gradient(1000px 500px at 90% 0%, #065f4633 0%, transparent 60%),
+        linear-gradient(180deg,var(--bg),var(--bg2) 60%);
+      min-height:100vh; display:grid; grid-template-rows:auto 1fr auto
+    }
+
+    /* Header / Hero */
+    header{padding:28px 20px 8px; border-bottom:1px solid var(--line); position:relative; overflow:hidden}
+    header .hero{
+      max-width:1100px; margin:0 auto; padding:10px 0 20px;
+      display:grid; gap:10px;
+    }
+    header h1{margin:0; font-size:24px; letter-spacing:.2px}
+    header p.sub{margin:0; color:#cbd5e1; font-size:14px}
+    .badge{
+      display:inline-flex; gap:6px; align-items:center;
+      background:linear-gradient(180deg,#0b1220,#0e1a2e); border:1px solid #1f2b40;
+      padding:6px 10px; border-radius:999px; font-weight:700; font-size:11px; color:#cfe3ff;
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(96,165,250,.6);animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(96,165,250,.6)}70%{box-shadow:0 0 0 8px rgba(96,165,250,0)}100%{box-shadow:0 0 0 0 rgba(96,165,250,0)}}
+
+    main{padding:22px}
+    .grid{
+      max-width:1100px; margin:0 auto;
+      display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:16px
+    }
     @media(min-width:740px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
     @media(min-width:1080px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-    .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; position:relative}
-    .title{font-weight:700; font-size:16px}
-    .desc{color:#cbd5e1; font-size:13px; line-height:1.35}
-    .actions{display:flex; gap:8px; margin-top:8px}
-    a.btn{appearance:none; text-decoration:none; background:#111827; border:1px solid var(--line); color:#e5e7eb; padding:9px 12px; border-radius:10px; font-weight:600; font-size:13px; text-align:center; flex:0 0 auto}
-    a.btn:hover{border-color:#334155}
-    footer{border-top:1px solid var(--line); padding:14px 20px; color:#cbd5e1; font-size:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap}
-    .warn{color:var(--warn)}
+
+    /* Card */
+    .card{
+      position:relative; background:linear-gradient(180deg,#0c1426,#0a1020 75%);
+      border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px;
+      box-shadow:0 8px 24px -12px var(--shadow);
+      transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+      isolation:isolate;
+    }
+    .card:hover{transform:translateY(-3px); box-shadow:0 18px 34px -14px var(--shadow); border-color:#2a3b55}
+    .card:focus-within{outline:2px solid var(--focus); outline-offset:2px}
+
+    .card .icon{
+      width:36px;height:36px;border-radius:10px; display:grid; place-items:center;
+      background:#0f1a2c; border:1px solid #1f2b40; box-shadow:inset 0 0 12px #0b1630;
+    }
+    .title{font-weight:800; font-size:16px; letter-spacing:.2px}
+    .desc{color:#cbd5e1; font-size:13px; line-height:1.4}
+    .tags{display:flex; gap:6px; flex-wrap:wrap}
+    .tag{font-size:11px; color:#b8c4d8; border:1px solid #223047; background:#0b1425; padding:4px 8px; border-radius:999px}
+
+    .actions{display:flex; gap:8px; margin-top:6px}
+    a.btn{
+      appearance:none; text-decoration:none; background:linear-gradient(180deg,#0f172a,#0b1220);
+      border:1px solid #243247; color:#e5e7eb; padding:9px 12px; border-radius:10px;
+      font-weight:700; font-size:13px; text-align:center; flex:0 0 auto;
+      transition:transform .2s ease, border-color .2s ease;
+    }
+    a.btn:hover{border-color:#334155; transform:translateY(-1px)}
+    a.card-link{position:absolute; inset:0; border-radius:16px; z-index:1}
+
+    /* Featured (Custos) */
+    .card.featured{
+      border-color:#2b3a5a;
+      box-shadow:0 12px 40px -10px rgba(96,165,250,.28), inset 0 0 0 1px rgba(96,165,250,.12);
+      background:
+        radial-gradient(600px 200px at 20% -20%, #60a5fa22 0%, transparent 60%),
+        radial-gradient(500px 200px at 110% 10%, #22c55e22 0%, transparent 60%),
+        linear-gradient(180deg,#0c1426,#0a1020 75%);
+    }
+    .card .ribbon{
+      position:absolute; top:12px; right:12px; z-index:2;
+      display:flex; align-items:center; gap:6px;
+      background:linear-gradient(180deg,#1f2937,#0b1220); border:1px solid #334155;
+      color:#dbeafe; font-weight:900; font-size:10px; letter-spacing:.22em;
+      padding:6px 10px; border-radius:999px; box-shadow:0 6px 20px -10px rgba(59,130,246,.6);
+    }
+    .ribbon .spark{width:10px;height:10px;border-radius:50%;background:linear-gradient(180deg,#93c5fd,#60a5fa)}
+
+    /* Featured spans */
+    @media(min-width:1080px){ .card.featured{grid-column:span 2;} }
+
+    /* Footer */
+    footer{
+      border-top:1px solid var(--line); padding:14px 20px; color:#cbd5e1; font-size:12px;
+      display:flex; justify-content:center; align-items:center; gap:8px; flex-wrap:wrap
+    }
+    .statcounter img{width:140px;height:auto;filter:invert(1) opacity(.65)}
+
+    /* Accessibility: reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      .card, a.btn{transition:none}
+      .dot{animation:none}
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Índice — Simuladores de Oferta & Demanda</h1>
+    <div class="hero">
+      <span class="badge"><span class="dot" aria-hidden="true"></span> Simuladores interativos • Oferta & Demanda</span>
+      <h1>Índice — Simuladores de Oferta & Demanda</h1>
+      <p class="sub">Explore ferramentas visuais para ensinar e aprender microeconomia, com foco em intuição, leitura de gráficos e cenários reais.</p>
+    </div>
   </header>
 
   <main>
     <div class="grid">
+
+      <!-- 6. CUSTOS — NOVO / DESTAQUE -->
+      <article class="card featured">
+        <a class="card-link" href="/inteco_T11/custos.html" aria-label="Abrir simulador Custos no Curto Prazo"></a>
+        <div class="ribbon"><span class="spark" aria-hidden="true"></span> N O V O</div>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone custo (engrenagem + gráfico) -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3l1.5 2.5 2.9.4-2 2 0.5 2.9L12 9.8 9.1 10.8 9.6 7.9 7.6 5.9l2.9-.4L12 3Z" stroke="#93c5fd" stroke-width="1.2"/>
+            <path d="M4 20h16M6 16l3-4 3 3 4-6 2 3" stroke="#86efac" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="title">Custos no Curto Prazo</div>
+        <div class="desc">Visualize <strong>CTMe</strong>, <strong>CVMe</strong> e <strong>CMg</strong>, identifique lucro/prejuízo e <em>shutdown</em>, com exemplos práticos (posto, sorveteria, transporte, roupas e refinaria).</div>
+        <div class="tags">
+          <span class="tag">Custo</span><span class="tag">Lucro/Prejuízo</span><span class="tag">Curto prazo</span>
+        </div>
+        <div class="actions">
+          <a class="btn" href="/inteco_T11/custos.html">ENTRAR</a>
+        </div>
+      </article>
+
       <!-- 1. Mudanças nos Excedentes -->
       <article class="card">
-        <div class="title">Mudanças nos Excedentes</div>
-        <div class="desc">Simula a variação nos excedentes a partir de alterações nas curvas e/ou variáveis</div>
-        <div class="actions">
-          <a class="btn" href="/inteco_T11/excedentes.html">ENTRAR</a>
+        <a class="card-link" href="/inteco_T11/excedentes.html" aria-label="Abrir simulador Mudanças nos Excedentes"></a>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone excedentes -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 19V5h16" stroke="#93c5fd" stroke-width="1.4"/>
+            <path d="M6 15l4-5 3 3 5-7" stroke="#22c55e" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
         </div>
+        <div class="title">Mudanças nos Excedentes</div>
+        <div class="desc">Simula a variação nos excedentes a partir de alterações nas curvas e/ou variáveis.</div>
+        <div class="tags">
+          <span class="tag">Excedente</span><span class="tag">Comparativo</span>
+        </div>
+        <div class="actions"><a class="btn" href="/inteco_T11/excedentes.html">ENTRAR</a></div>
       </article>
 
       <!-- 2. Equilíbrio -->
       <article class="card">
+        <a class="card-link" href="/inteco_T11/equilibrio.html" aria-label="Abrir simulador Equilíbrio"></a>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone equilíbrio -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12h18" stroke="#93c5fd" stroke-width="1.4"/>
+            <circle cx="12" cy="12" r="3" stroke="#22c55e" stroke-width="1.4"/>
+          </svg>
+        </div>
         <div class="title">Equilíbrio</div>
-        <div class="desc">Demonstra variações ao redor da quantidade de equilíbrio</div>
-        <div class="actions">
-          <a class="btn" href="/inteco_T11/equilibrio.html">ENTRAR</a>
+        <div class="desc">Demonstra variações ao redor da quantidade de equilíbrio.</div>
+        <div class="tags">
+          <span class="tag">Oferta & Demanda</span><span class="tag">Comparativo</span>
         </div>
+        <div class="actions"><a class="btn" href="/inteco_T11/equilibrio.html">ENTRAR</a></div>
       </article>
-         
-      <!-- 3. Excedente do Consumidor -->
+
+      <!-- 3. Excedente do Consumidor (discreto) -->
       <article class="card">
-        <div class="title">Excedente do Consumidor - Quantidade Discreta</div>
-        <div class="desc">Demonstra variações no excedente do consumidor para demanda discreta por bens ou serviços</div>
-        <div class="actions">
-          <a class="btn" href="/inteco_T11/ec_discreta.html">ENTRAR</a>
+        <a class="card-link" href="/inteco_T11/ec_discreta.html" aria-label="Abrir simulador Excedente do Consumidor Quantidade Discreta"></a>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone consumidor -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M8 7a4 4 0 118 0 4 4 0 01-8 0Z" stroke="#e879f9" stroke-width="1.3"/>
+            <path d="M4 21c1.5-3.5 4.5-5.5 8-5.5s6.5 2 8 5.5" stroke="#93c5fd" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
         </div>
+        <div class="title">Excedente do Consumidor — Quantidade Discreta</div>
+        <div class="desc">Variações no excedente do consumidor para demanda discreta por bens ou serviços.</div>
+        <div class="tags">
+          <span class="tag">Excedente</span><span class="tag">Discreto</span>
+        </div>
+        <div class="actions"><a class="btn" href="/inteco_T11/ec_discreta.html">ENTRAR</a></div>
       </article>
+
       <!-- 4. Teto e Piso -->
       <article class="card">
-        <div class="title">Preços máximos e mínimos</div>
-        <div class="desc">Demonstra situações de excesso ou escassez a partir da imposição de preços pelo Governo</div>
-        <div class="actions">
-          <a class="btn" href="/inteco_T11/teto_piso.html">ENTRAR</a>
+        <a class="card-link" href="/inteco_T11/teto_piso.html" aria-label="Abrir simulador Preços máximos e mínimos"></a>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone preço regulado -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M6 6h12M6 12h12M6 18h8" stroke="#f59e0b" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
         </div>
+        <div class="title">Preços Máximos e Mínimos</div>
+        <div class="desc">Excesso ou escassez a partir da imposição de preços pelo Governo.</div>
+        <div class="tags">
+          <span class="tag">Regulação</span><span class="tag">Mercado</span>
+        </div>
+        <div class="actions"><a class="btn" href="/inteco_T11/teto_piso.html">ENTRAR</a></div>
       </article>
+
       <!-- 5. Elasticidades -->
       <article class="card">
-        <div class="title">Elasticidade</div>
-        <div class="desc">Demonstra as variações nas elasticidades a partir de mudanças nos preços ou na inclinação das curvas de oferta ou demanda</div>
-        <div class="actions">
-          <a class="btn" href="/inteco_T11/elast.html">ENTRAR</a>
+        <a class="card-link" href="/inteco_T11/elast.html" aria-label="Abrir simulador Elasticidade"></a>
+        <div class="icon" aria-hidden="true">
+          <!-- ícone elasticidade -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 20L10 8l4 8 6-12" stroke="#22c55e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
+        <div class="title">Elasticidade</div>
+        <div class="desc">Variações nas elasticidades a partir de mudanças nos preços ou na inclinação de oferta/demanda.</div>
+        <div class="tags">
+          <span class="tag">Elasticidade</span><span class="tag">Curvas</span>
+        </div>
+        <div class="actions"><a class="btn" href="/inteco_T11/elast.html">ENTRAR</a></div>
       </article>
+
     </div>
   </main>
-<footer>
-  <div class="statcounter">
-    
+
+  <footer>
+    <div class="statcounter">
       <img class="statcounter"
            src="https://c.statcounter.com/13166227/0/672867ef/0/"
            alt="web statistics"
            referrerpolicy="no-referrer-when-downgrade"
            width="150" height="150">
-    
-  </div>
-</footer>
- 
-<!-- Default Statcounter code for INTECO
-https://wandembergvrs.github.io/inteco_T11/ -->
-<script type="text/javascript">
-var sc_project=13166227; 
-var sc_invisible=0; 
-var sc_security="672867ef"; 
-var scJsHost = "https://";
-document.write("<sc"+"ript type='text/javascript' src='" + scJsHost+
-"statcounter.com/counter/counter.js'></"+"script>");
-</script>
+    </div>
+    <span>© Inteco • Ensino & Simuladores</span>
+  </footer>
 
-  
+  <!-- Default Statcounter code for INTECO -->
+  <script type="text/javascript">
+    var sc_project=13166227;
+    var sc_invisible=0;
+    var sc_security="672867ef";
+    var scJsHost = "https://";
+    document.write("<sc"+"ript type='text/javascript' src='" + scJsHost+
+    "statcounter.com/counter/counter.js'></"+"script>");
+  </script>
 </body>
 </html>
