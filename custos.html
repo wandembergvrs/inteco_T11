@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Curto Prazo — CTMe, CVMe, CMg e Oferta (a₂ fixo = 0,1)</title>
+<style>
+  :root{
+    --bg:#0f172a;--panel:#0b1220;--ink:#e5e7eb;--muted:#94a3b8;--line:#1f2937;--grid:#162036;
+    --ctme:#fbbf24;--cvme:#60a5fa;--cmg:#22c55e;--price:#e879f9;
+    --profit:rgba(34,197,94,.22);--loss:rgba(239,68,68,.22);--shut:rgba(99,102,241,.16)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;display:grid;grid-template-rows:auto auto 1fr}
+  header{padding:16px 20px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:20px}
+  .controls{display:grid;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .box{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0c1222}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  input[type=range], select{width:100%}
+  .val{font-variant-numeric:tabular-nums;text-align:right;font-size:12px;color:#cbd5e1}
+  main{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;padding:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-rows:auto 1fr auto;gap:8px;min-height:520px}
+  .panel.compact{grid-template-rows:auto auto auto}
+  h2{margin:0 0 4px;font-size:16px}
+  canvas{width:100%;height:100%;background:#0b1220;border-radius:12px;display:block}
+  .legend{display:flex;gap:14px;justify-content:center;color:#cbd5e1;font-size:12px;flex-wrap:wrap}
+  .dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .ctme{background:var(--ctme)} .cvme{background:var(--cvme)} .cmg{background:var(--cmg)} .price{background:var(--price)}
+  .profit{background:var(--profit);border:1px solid rgba(34,197,94,.6)}
+  .loss{background:var(--loss);border:1px solid rgba(239,68,68,.6)}
+  .shut{background:var(--shut);border:1px solid rgba(99,102,241,.4)}
+
+  /* leitura compacta */
+  .metrics{display:flex;gap:8px;align-items:flex-start}
+  .chip{display:inline-flex;align-items:baseline;gap:8px;background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-width:max-content}
+  .k{font-size:11px;color:var(--muted)} .v{font-variant-numeric:tabular-nums;font-weight:700}
+  .chip.good{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.55) }
+  .chip.bad { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.55) }
+  .chip.zero{ background: rgba(148,163,184,.12); border-color: rgba(148,163,184,.35) }
+
+  /* composição com ícones temáticos */
+  .viz{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .vizcard{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:10px}
+  .vizhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;color:#cbd5e1}
+  .vizicons{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow:hidden; --emosize:18px}
+  .emo{font-size:var(--emosize); line-height:1; filter:drop-shadow(0 0 1px rgba(0,0,0,.25))}
+  .tip{font-size:11px;color:#9aa7bd;margin-top:6px}
+  .explain{background:#0b1220;border:1px dashed #334155;border-radius:12px;padding:10px;font-size:13px;line-height:1.45}
+  .help{font-size:12px;color:#9aa7bd;margin-top:6px;line-height:1.35}
+
+  @media (max-width:1080px){ main{grid-template-columns:1fr} .grid{grid-template-columns:1fr 1fr} }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr} .viz{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header><h1>Curto Prazo — CTMe, CVMe, CMg e Oferta (a₂ fixo = 0,1)</h1></header>
+
+<section class="controls">
+  <div class="grid">
+    <!-- EXEMPLOS -->
+    <div class="box">
+      <label for="preset">Exemplos práticos</label>
+      <select id="preset">
+        <option value="gas" selected>Posto de gasolina</option>
+        <option value="ice">Sorveteria</option>
+        <option value="bus">Transporte público (linha)</option>
+        <option value="clothes">Loja de roupas</option>
+        <option value="ref">Refinaria de petróleo</option>
+      </select>
+      <div class="help" id="presetInfo"></div>
+    </div>
+
+    <div class="box">
+      <label for="F">Custo Fixo Total (F)</label>
+      <input id="F" type="range" min="0" max="5000" step="1" value="120">
+      <div class="val" id="Fv">F = 120</div>
+      <div class="help">Aluguel, equipamentos, licenças… (não variam com Q).</div>
+    </div>
+
+    <div class="box">
+      <label for="a1">Custo variável por unidade (a₁)</label>
+      <input id="a1" type="range" min="0" max="60" step="0.1" value="10.0">
+      <div class="val" id="a1v">a₁ = 10,0</div>
+      <div class="help">Insumos, compra para revenda, combustível, comissões…</div>
+    </div>
+
+    <div class="box">
+      <label for="P">Preço de mercado (P)</label>
+      <input id="P" type="range" min="0" max="120" step="0.1" value="20.0">
+      <div class="val" id="Pv">P = 20,0</div>
+    </div>
+
+    <div class="box">
+      <label>Visualização do eixo Q</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input id="autoz" type="checkbox" checked>
+        <span class="val" id="autozv">Autozoom em Q*</span>
+      </div>
+    </div>
+
+    <div class="box" id="qmaxBox">
+      <label for="Qmax">Alcance de Q (quando autozoom desligado)</label>
+      <input id="Qmax" type="range" min="40" max="400" step="10" value="200">
+      <div class="val" id="Qmaxv">Qmax = 200</div>
+    </div>
+  </div>
+</section>
+
+<main>
+  <section class="panel">
+    <h2>Gráfico — CTMe, CVMe, CMg e Oferta</h2>
+    <canvas id="chart" width="1100" height="560" aria-label="Plano Custo × Quantidade"></canvas>
+    <div class="legend">
+      <span><span class="dot ctme"></span> CTMe</span>
+      <span><span class="dot cvme"></span> CVMe</span>
+      <span><span class="dot cmg"></span> CMg / Oferta</span>
+      <span><span class="dot price"></span> P (preço)</span>
+      <span class="profit" style="padding:2px 6px;border-radius:8px">Lucro</span>
+      <span class="loss"   style="padding:2px 6px;border-radius:8px">Prejuízo operando</span>
+      <span class="shut"   style="padding:2px 6px;border-radius:8px">Fecha (shutdown)</span>
+    </div>
+  </section>
+
+  <!-- Painel de leitura em formato compacto -->
+  <section class="panel compact">
+    <h2>Leitura no equilíbrio de curto prazo</h2>
+
+    <div class="metrics">
+      <div class="chip"><div class="k">Resultado econômico (π):</div><div class="v" id="profit">—</div></div>
+    </div>
+
+    <!-- Quadro visual de custos -->
+    <div class="viz" aria-live="polite">
+      <div class="vizcard" id="cardF">
+        <div class="vizhead">
+          <strong>Fixos</strong>
+          <span id="valF">—</span>
+        </div>
+        <div class="vizicons" id="iconsF" aria-label="Ícones de custo fixo"></div>
+        <div class="tip">Ex.: <span id="listF">—</span></div>
+      </div>
+      <div class="vizcard" id="cardV">
+        <div class="vizhead">
+          <strong>Variáveis em Q*</strong>
+          <span id="valV">—</span>
+        </div>
+        <div class="vizicons" id="iconsV" aria-label="Ícones de custo variável que crescem com Q"></div>
+        <div class="tip">Ex.: <span id="listV">—</span></div>
+      </div>
+    </div>
+
+    <!-- Texto explicativo (sem fórmulas) -->
+    <div class="explain" id="composition">—</div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const preset=$('preset'), presetInfo=$('presetInfo');
+const F=$('F'), a1=$('a1'), P=$('P');
+const Fv=$('Fv'), a1v=$('a1v'), Pv=$('Pv');
+const autoz=$('autoz'), autozv=$('autozv'), qmaxBox=$('qmaxBox'), Qmax=$('Qmax'), Qmaxv=$('Qmaxv');
+const profitEl=$('profit'), compositionEl=$('composition');
+const valF=$('valF'), valV=$('valV'), iconsF=$('iconsF'), iconsV=$('iconsV'), listF=$('listF'), listV=$('listV');
+const canvas=$('chart'), ctx=canvas.getContext('2d');
+
+// modelo: a2 fixo e convexo
+const A2 = 0.1;
+
+// paleta
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+const COL = { grid:cssVar('--grid')||'#162036', ctme:cssVar('--ctme'), cvme:cssVar('--cvme'),
+  cmg:cssVar('--cmg'), price:cssVar('--price'), profit:cssVar('--profit'), loss:cssVar('--loss'), shut:cssVar('--shut') };
+
+// formatadores
+const fmtBRL = new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL', maximumFractionDigits:2 });
+const fmtNum = new Intl.NumberFormat('pt-BR',{ maximumFractionDigits:2 });
+
+// chip do lucro
+function setProfitChip(val){
+  const chip = profitEl.parentElement;
+  chip.classList.remove('good','bad','zero');
+  if(val==null || !Number.isFinite(val)) { chip.classList.add('zero'); return; }
+  if(val>0) chip.classList.add('good'); else if(val<0) chip.classList.add('bad'); else chip.classList.add('zero');
+}
+
+// funções do modelo
+function TVC(Q,a1_){ return a1_*Q + A2*Q*Q; }
+function CVMe(Q,a1_){ return (Q<=1e-9) ? a1_ : (a1_ + A2*Q); }
+function CTMe(Q,F_,a1_){ return (Q<=1e-9) ? Infinity : (F_/Q + a1_ + A2*Q); }
+function CMg(Q,a1_){ return a1_ + 2*A2*Q; }
+function pShutdown(a1_){ return a1_; }
+function solveQstar(P_,a1_){ const ps=pShutdown(a1_); if(P_<ps) return null; return Math.max(0,(P_-a1_)/(2*A2)); }
+
+// ====== visual ======
+let QMAX=200, CMAX=60;
+const QMIN_VIEW=60, QMAX_VIEW=200, QFALLBACK=120;
+function niceUp(x, step=10){ return Math.ceil(x/step)*step; }
+function getPad(){ return {left:60,right:20,top:20,bottom:54}; }
+function adjustScales(F_,a1_,P_){
+  const n=600; let maxC=Math.max(20,P_); const qCut=Math.max(2,0.08*QMAX);
+  for(let i=0;i<=n;i++){
+    const Q=qCut+(i/n)*(QMAX-qCut);
+    const vals=[ CTMe(Q,F_,a1_), CVMe(Q,a1_), CMg(Q,a1_) ];
+    for(const v of vals){ if(Number.isFinite(v)) maxC=Math.max(maxC,v); }
+  }
+  if(!Number.isFinite(maxC) || maxC<=0) maxC=100;
+  CMAX=Math.ceil(maxC*1.2/10)*10;
+}
+function toPX(Q,C){ const pad=getPad(); const W=canvas.width-pad.left-pad.right, H=canvas.height-pad.top-pad.bottom;
+  return [pad.left+(Q/QMAX)*W, pad.top+H-(C/CMAX)*H]; }
+function fromPX(x,y){ const pad=getPad(); const W=canvas.width-pad.left-pad.right, H=canvas.height-pad.top-pad-bottom;
+}
+</script>
+<script>
+// fix fromPX line break (continued correctly)
+function fromPX(x,y){
+  const pad=getPad(); const W=canvas.width-pad.left-pad.right, H=canvas.height-pad.top-pad.bottom;
+  const Q=Math.min(QMAX,Math.max(0,(x-pad.left)/(W||1)*QMAX));
+  const C=Math.min(CMAX,Math.max(0,(pad.top+H-y)/(H||1)*CMAX));
+  return [Q,C];
+}
+function line(Q1,C1,Q2,C2,clr,w=2){ ctx.beginPath(); const [x1,y1]=toPX(Q1,C1),[x2,y2]=toPX(Q2,C2); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineWidth=w; ctx.strokeStyle=clr; ctx.stroke(); }
+function hline(C,clr,w=1.6){ line(0,C,QMAX,C,clr,w); } function vline(Q,clr,w=1.2){ line(Q,0,Q,CMAX,clr,w); }
+function fillRectQ(Q1,Q2,C1,C2,style){ const [x1,y1]=toPX(Q1,C1),[x2,y2]=toPX(Q2,C2);
+  const xL=Math.min(x1,x2), xR=Math.max(x1,x2), yT=Math.min(y1,y2), yB=Math.max(y1,y2);
+  ctx.fillStyle=style; ctx.fillRect(xL,yT,xR-xL,yB-yT); }
+function text(txt,x,y,align='left',color='#e5e7eb'){ ctx.fillStyle=color; ctx.font='12px ui-sans-serif'; ctx.textAlign=align; ctx.fillText(txt,x,y); }
+function grid(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const pad=getPad(); const qStep=Math.max(10,Math.round(QMAX/10)); const cStep=Math.max(5,Math.round(CMAX/12));
+  for(let QQ=0;QQ<=QMAX;QQ+=qStep){ line(QQ,0,QQ,CMAX,COL.grid,1); }
+  for(let CC=0;CC<=CMAX;CC+=cStep){ line(0,CC,QMAX,CC,COL.grid,1); }
+  line(0,0,QMAX,0,'#9ca3af',2.2); line(0,0,0,CMAX,'#9ca3af',2.2);
+  for(let QQ=0;QQ<=QMAX;QQ+=qStep){ const [x,y]=toPX(QQ,0); text(String(QQ),x,y+16,'center'); }
+  const W=canvas.width-pad.left-pad.right, H=canvas.height-pad.top-pad.bottom;
+  text('Quantidade (Q)', pad.left+W/2, pad.top+H+36,'center');
+  ctx.save(); ctx.translate(16,pad.top+H/2); ctx.rotate(-Math.PI/2); text('Custo / Preço (R$ por unidade)', 0,0,'center'); ctx.restore();
+}
+function labelAt(Q,C,txt,side='right'){ const [x,y]=toPX(Q,C); ctx.save(); ctx.font='12px ui-sans-serif';
+  const p=4,m=ctx.measureText(txt),w=m.width+p*2,h=16,x0=(side==='right'?x+8:x-w-8),y0=y-h/2-2;
+  ctx.fillStyle='rgba(2,6,23,0.85)'; ctx.strokeStyle='rgba(148,163,184,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(x0,y0,w,h); ctx.fill(); ctx.stroke(); ctx.fillStyle='#e5e7eb'; ctx.fillText(txt,x0+p,y0+12); ctx.restore(); }
+
+function drawCurves(F_,a1_){
+  const n=600; let prev=null;
+  for(let i=1;i<=n;i++){ const Q=(i/n)*QMAX; const C=CTMe(Q,F_,a1_); if(i>1) line(prev.Q,prev.C,Q,C,COL.ctme,2.6); prev={Q,C}; }
+  prev=null;
+  for(let i=0;i<=n;i++){ const Q=(i/n)*QMAX; const C=CVMe(Q,a1_); if(i>0) line(prev.Q,prev.C,Q,C,COL.cvme,2.6); prev={Q,C}; }
+  prev=null;
+  for(let i=0;i<=n;i++){ const Q=(i/n)*QMAX; const C=CMg(Q,a1_); if(i>0) line(prev.Q,prev.C,Q,C,COL.cmg,3); prev={Q,C}; }
+  const Qr=Math.max(10,QMAX*0.65), Qv=Math.max(8,QMAX*0.80), Qm=Math.max(6,QMAX*0.72);
+  labelAt(Qr,CTMe(Qr,F_,a1_),'CTMe'); labelAt(Qv,CVMe(Qv,a1_),'CVMe'); labelAt(Qm,CMg(Qm,a1_),'CMg / Oferta','left');
+}
+
+function drawShadingAndMarkers(F_,a1_,P_){
+  const pShut=pShutdown(a1_);
+  fillRectQ(0,QMAX,0,Math.min(CMAX,pShut), COL.shut);
+  hline(P_,COL.price,2.2); labelAt(QMAX*0.95,P_,'P','left');
+
+  const q = solveQstar(P_,a1_);
+  if(q==null){ return {profit:-F_, Qstar:0, shutdown:true}; }
+
+  const Qstar=Math.min(QMAX,q);
+  const atc=CTMe(Qstar,F_,a1_), cmg=CMg(Qstar,a1_), pi=(P_-atc)*Qstar;
+
+  vline(Qstar,'#64748b',1.2);
+  const [xQ,y0]=toPX(Qstar,0), [,yATC]=toPX(Qstar,atc), [,yMC]=toPX(Qstar,cmg);
+  ctx.beginPath(); ctx.moveTo(xQ+0,y0); ctx.lineTo(xQ+0,yATC); ctx.lineWidth=3; ctx.strokeStyle=cssVar('--ctme'); ctx.stroke();
+  ctx.beginPath(); ctx.arc(xQ,yMC,4,0,2*Math.PI); ctx.fillStyle='#fde68a'; ctx.fill(); ctx.strokeStyle=cssVar('--cmg'); ctx.lineWidth=2; ctx.stroke();
+
+  if(Qstar>0){ const style=(P_>=atc)?COL.profit:COL.loss; fillRectQ(0,Qstar,Math.min(P_,atc),Math.max(P_,atc),style); }
+  return {profit:pi, Qstar, shutdown:false};
+}
+
+function updateProfit(res){
+  const txt = fmtBRL.format(res.profit) + (res.profit<0 ? " (prejuízo)" : (res.profit>0 ? " (lucro)" : " (zero)"));
+  profitEl.textContent = txt; setProfitChip(res.profit);
+}
+
+// Tooltip simplificado
+const mouse = {active:false, x:0, y:0};
+function drawHoverOverlay(F_,a1_,P_){
+  if(!mouse.active) return;
+  const pad=getPad(); if(mouse.x<pad.left||mouse.x>canvas.width-pad.right||mouse.y<pad.top||mouse.y>canvas.height-pad.bottom) return;
+  const [Qh]=fromPX(mouse.x,mouse.y);
+  const atc=CTMe(Qh,F_,a1_), avc=CVMe(Qh,a1_), mc=CMg(Qh,a1_), pi=(Number.isFinite(atc)?(P_-atc)*Qh:0);
+  ctx.save(); ctx.setLineDash([5,5]); vline(Qh,'rgba(148,163,184,.6)',1); ctx.setLineDash([]); ctx.restore();
+  [{C:atc,col:cssVar('--ctme')},{C:avc,col:cssVar('--cvme')},{C:mc,col:cssVar('--cmg')}].forEach(d=>{
+    if(Number.isFinite(d.C)){ const [x,y]=toPX(Qh,d.C); ctx.beginPath(); ctx.arc(x,y,3.2,0,2*Math.PI);
+      ctx.fillStyle=d.col; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.stroke(); }
+  });
+  const ps=pShutdown(a1_);
+  const lines=[`Q: ${fmtNum.format(Qh)}`, `CTMe(Q): ${Number.isFinite(atc)?fmtBRL.format(atc):'—'}`,
+    `CVMe(Q): ${fmtBRL.format(avc)}`, `CMg(Q): ${fmtBRL.format(mc)}`, `P: ${fmtBRL.format(P_)}`, `π(Q): ${fmtBRL.format(pi)}`];
+  const status=(P_<ps)?'Fecha (P < a₁)':'Operando';
+
+  ctx.save(); ctx.font='12px ui-sans-serif';
+  const padBox=8, lh=16; let w=0; for(const s of [...lines,status]) w=Math.max(w,ctx.measureText(s).width);
+  const h=lh*(lines.length+1)+padBox*2+6; let tx=mouse.x+14, ty=mouse.y+14;
+  if(tx+w+padBox*2>canvas.width-8) tx=mouse.x-w-padBox*2-14; if(ty+h>canvas.height-8) ty=mouse.y-h-14;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx,ty,w+padBox*2,h,8) : (function(){ctx.moveTo(tx+8,ty);ctx.arcTo(tx+w+padBox*2,ty,tx+w+padBox*2,ty+h,8);ctx.arcTo(tx+w+padBox*2,ty+h,tx,ty+h,8);ctx.arcTo(tx,ty+h,tx,ty,8);ctx.arcTo(tx,ty,tx+w+padBox*2,ty,8);ctx.closePath();})();
+  ctx.fillStyle='rgba(2,6,23,0.92)'; ctx.strokeStyle='rgba(148,163,184,0.35)'; ctx.lineWidth=1; ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#e5e7eb'; let y=ty+padBox+12; lines.slice(0,5).forEach(s=>{ ctx.fillText(s,tx+padBox,y); y+=lh; });
+  ctx.fillStyle=(pi>0)?'rgb(34,197,94)':(pi<0?'rgb(239,68,68)':'#e5e7eb'); ctx.fillText(lines[5],tx+padBox,y); y+=lh+4;
+  ctx.fillStyle=(P_<ps)?'rgb(99,102,241)':'#94a3b8'; ctx.fillText(status,tx+padBox,y); ctx.restore();
+}
+
+// ====== Presets com ícones temáticos ======
+const PRESETS = {
+  gas: {
+    name:'posto de gasolina',
+    F:120, a1:10, P:20,
+    info:'F alto (aluguel/bombas/seguro). a₁ ≈ custo do litro no atacado; P = preço na bomba.',
+    fixed:['aluguel','bombas e tanques','licenças e seguros','sistemas e caixa'],
+    variable:['compra do combustível','taxas de cartão','energia e insumos operacionais'],
+    iconF:'🏪', iconV:'⛽'
+  },
+  ice: {
+    name:'sorveteria',
+    F:80, a1:4, P:10,
+    info:'F médio (freezers/loja). a₁ ingredientes; P por porção.',
+    fixed:['freezers e vitrines','aluguel','equipamentos'],
+    variable:['ingredientes','embalagens','energia por batelada'],
+    iconF:'🧊', iconV:'🍦'
+  },
+  bus: {
+    name:'linha de transporte público',
+    F:400, a1:1.5, P:4,
+    info:'F muito alto (veículo/licenças/garagem). a₁ diesel e manutenção variável; P = tarifa.',
+    fixed:['veículo e depreciação','licenças e seguros','garagem e administração'],
+    variable:['diesel por km','manutenção por uso','limpeza por viagem'],
+    iconF:'🚌', iconV:'⛽'
+  },
+  clothes: {
+    name:'loja de roupas',
+    F:150, a1:20, P:50,
+    info:'F médio/alto (aluguel/vitrine). a₁ custo de compra; P por peça.',
+    fixed:['aluguel','mobiliário e vitrine','sistema de PDV'],
+    variable:['compra de peças','embalagens','comissões por venda'],
+    iconF:'🏬', iconV:'👗'
+  },
+  ref: {
+    name:'refinaria de petróleo',
+    F:1500, a1:6, P:14,
+    info:'F elevadíssimo (planta/segurança/compliance). a₁ petróleo bruto e utilidades; P por unidade de derivados.',
+    fixed:['planta e depreciação','segurança e compliance','pessoal mínimo e utilidades fixas'],
+    variable:['petróleo bruto (feedstock)','energia e catalisadores','logística variável'],
+    iconF:'🏭', iconV:'🛢️'
+  }
+};
+let currentPreset = 'gas';
+
+function listToPhrase(arr){
+  if(!arr || !arr.length) return '—';
+  if(arr.length===1) return arr[0];
+  return arr.slice(0,-1).join(', ') + ' e ' + arr[arr.length-1];
+}
+function applyPreset(key){
+  const p = PRESETS[key]; if(!p) return;
+  currentPreset = key;
+  presetInfo.textContent = p.info||'';
+  F.value=p.F; a1.value=p.a1; P.value=p.P;
+  draw();
+}
+
+// gerar N emojis com ajuste de tamanho
+function renderEmojis(container, n, emoji){
+  container.innerHTML = '';
+  const max = Math.max(0, Math.min(140, n|0));
+  // diminuir um pouco o tamanho quando há muitos
+  const size = (max>120)?12:(max>80)?14:18;
+  container.style.setProperty('--emosize', size+'px');
+  for(let i=0;i<max;i++){
+    const s=document.createElement('span');
+    s.className='emo';
+    s.textContent=emoji;
+    container.appendChild(s);
+  }
+}
+
+// composição amigável + ícones
+function renderComposition(res, F_, a1_, P_){
+  const p = PRESETS[currentPreset] || {};
+  const nome = p.name || 'negócio';
+  const Qs = res.Qstar || 0;
+  const tvc = res.shutdown ? 0 : TVC(Qs, a1_);
+
+  // contagem de ícones (escala suave via raiz quadrada)
+  const countF = Math.max(1, Math.min(140, Math.round(Math.sqrt(F_))));
+  const countV = Math.max(0, Math.min(140, Math.round(Math.sqrt(tvc))));
+
+  valF.textContent = fmtBRL.format(F_);
+  valV.textContent = fmtBRL.format(tvc);
+  renderEmojis(iconsF, countF, p.iconF || '🏢');
+  renderEmojis(iconsV, countV, p.iconV || '📦');
+  listF.textContent = listToPhrase(p.fixed||[]);
+  listV.textContent = listToPhrase(p.variable||[]);
+
+  const base = (res.shutdown)
+    ? `No exemplo de <b>${nome}</b>, o preço está abaixo do custo variável médio. A firma fecha no curto prazo: <b>Q* = 0</b>. Os custos <b>fixos</b> (irrecuperáveis) permanecem em ${fmtBRL.format(F_)}, e o custo variável realizado é <b>${fmtBRL.format(0)}</b>.`
+    : `No exemplo de <b>${nome}</b>, a quantidade de equilíbrio é <b>Q* ≈ ${fmtNum.format(Qs)}</b>. Nessa produção, os <b>fixos</b> somam ${fmtBRL.format(F_)}, e o <b>custo variável total</b> fica em <b>${fmtBRL.format(tvc)}</b>. Como o custo por unidade adicional aumenta com a produção, o custo variável cresce mais rápido (comportamento convexo).`;
+
+  compositionEl.innerHTML = base;
+}
+
+// ====== ciclo ======
+function draw(){
+  const F_ = +F.value, a1_ = +a1.value, P_ = +P.value;
+  Fv.textContent=`F = ${fmtNum.format(F_)}`;
+  a1v.textContent=`a₁ = ${fmtNum.format(a1_)}`;
+  Pv.textContent =`P = ${fmtNum.format(P_)}`;
+
+  const qStar = solveQstar(P_,a1_);
+  if(autoz.checked){
+    const target = (qStar ?? QFALLBACK);
+    const rawMax = Math.max(QMIN_VIEW, target/0.65);
+    QMAX = Math.min(QMAX_VIEW, Math.ceil(rawMax/10)*10);
+    autozv.textContent='Autozoom em Q*'; qmaxBox.style.opacity=.5; qmaxBox.style.pointerEvents='none';
+  }else{
+    QMAX = +Qmax.value; Qmaxv.textContent=`Qmax = ${QMAX}`;
+    autozv.textContent='Zoom manual'; qmaxBox.style.opacity=1; qmaxBox.style.pointerEvents='auto';
+  }
+
+  adjustScales(F_,a1_,P_);
+  grid();
+  drawCurves(F_,a1_);
+  const res = drawShadingAndMarkers(F_,a1_,P_);
+  updateProfit(res);
+  renderComposition(res, F_, a1_, P_);
+  drawHoverOverlay(F_,a1_,P_);
+}
+
+// eventos
+preset.addEventListener('change', e=> applyPreset(e.target.value));
+[F,a1,P,autoz,Qmax].forEach(el=> el.addEventListener('input', draw));
+
+// resize
+function setCanvasSizeFrom(widthCSS){
+  const scale=window.devicePixelRatio||1;
+  const w=Math.max(820,Math.floor(widthCSS*scale)), h=Math.max(440,Math.floor(widthCSS*0.55*scale));
+  if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; requestAnimationFrame(draw); }
+}
+function attachObservers(){
+  const container=canvas.parentElement||document.body;
+  if('ResizeObserver' in window){
+    const ro=new ResizeObserver(entries=>{
+      for(const entry of entries){
+        const widthCSS=(entry.contentBoxSize && entry.contentBoxSize[0]?.inlineSize) || entry.contentRect?.width || container.getBoundingClientRect().width || 1100;
+        requestAnimationFrame(()=> setCanvasSizeFrom(widthCSS));
+      }
+    });
+    ro.observe(container);
+  }else{
+    window.addEventListener('resize', ()=>{
+      const widthCSS=(canvas.parentElement||document.body).getBoundingClientRect().width||1100;
+      setCanvasSizeFrom(widthCSS);
+    });
+  }
+}
+
+// hover
+function canvasPointFromEvent(e){
+  const r=canvas.getBoundingClientRect(), sx=canvas.width/r.width, sy=canvas.height/r.height;
+  return [(e.clientX-r.left)*sx,(e.clientY-r.top)*sy];
+}
+canvas.addEventListener('pointermove', e=>{ const [x,y]=canvasPointFromEvent(e); mouse.active=true; mouse.x=x; mouse.y=y; draw(); });
+canvas.addEventListener('pointerleave', ()=>{ mouse.active=false; draw(); });
+
+window.addEventListener('load', ()=>{
+  const widthCSS=(canvas.parentElement||document.body).getBoundingClientRect().width||1100;
+  setCanvasSizeFrom(widthCSS); attachObservers();
+  applyPreset('gas'); // inicia com Posto de gasolina
+});
+</script>
+</body>
+</html>
