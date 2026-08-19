@@ -1,13 +1,138 @@
 // ============================================================
+// Safe math-formula compiler: turns a string like "10 - 0.8*x"
+// into a function of x, WITHOUT using eval()/Function() on
+// untrusted text. Supports + - * / ^, unary minus, parentheses,
+// numbers, the variable x, and sqrt/abs/min/max/ln/exp.
+// ============================================================
+function compileFormula(source) {
+  const tokens = tokenizeFormula(source);
+  let pos = 0;
+
+  function peek() { return tokens[pos]; }
+  function next() { return tokens[pos++]; }
+
+  function parseExpr() {
+    let node = parseTerm();
+    while (peek() && (peek().v === "+" || peek().v === "-")) {
+      const op = next().v;
+      const rhs = parseTerm();
+      const prev = node;
+      node = (x) => (op === "+" ? prev(x) + rhs(x) : prev(x) - rhs(x));
+    }
+    return node;
+  }
+
+  function parseTerm() {
+    let node = parsePow();
+    while (peek() && (peek().v === "*" || peek().v === "/")) {
+      const op = next().v;
+      const rhs = parsePow();
+      const prev = node;
+      node = (x) => (op === "*" ? prev(x) * rhs(x) : prev(x) / rhs(x));
+    }
+    return node;
+  }
+
+  function parsePow() {
+    let node = parseUnary();
+    if (peek() && peek().v === "^") {
+      next();
+      const rhs = parsePow();
+      const prev = node;
+      node = (x) => Math.pow(prev(x), rhs(x));
+    }
+    return node;
+  }
+
+  function parseUnary() {
+    if (peek() && peek().v === "-") {
+      next();
+      const inner = parseUnary();
+      return (x) => -inner(x);
+    }
+    if (peek() && peek().v === "+") {
+      next();
+      return parseUnary();
+    }
+    return parsePrimary();
+  }
+
+  const FUNCS = {
+    sqrt: Math.sqrt, abs: Math.abs, min: Math.min, max: Math.max,
+    ln: Math.log, exp: Math.exp,
+  };
+
+  function parsePrimary() {
+    const t = next();
+    if (!t) throw new Error("Formula inesperadamente vazia");
+    if (t.t === "num") return () => t.v;
+    if (t.t === "id") {
+      if (t.v === "x") return (x) => x;
+      if (FUNCS[t.v]) {
+        if (!peek() || peek().v !== "(") throw new Error(`Esperado '(' apos ${t.v}`);
+        next();
+        const args = [parseExpr()];
+        while (peek() && peek().v === ",") {
+          next();
+          args.push(parseExpr());
+        }
+        if (!peek() || peek().v !== ")") throw new Error("Esperado ')'");
+        next();
+        const fn = FUNCS[t.v];
+        return (x) => fn(...args.map((a) => a(x)));
+      }
+      throw new Error(`Identificador desconhecido: ${t.v}`);
+    }
+    if (t.v === "(") {
+      const inner = parseExpr();
+      if (!peek() || peek().v !== ")") throw new Error("Esperado ')'");
+      next();
+      return inner;
+    }
+    throw new Error(`Token inesperado: ${t.v}`);
+  }
+
+  const fn = parseExpr();
+  if (pos !== tokens.length) throw new Error("Formula mal formada (sobrou texto)");
+  return fn;
+}
+
+function tokenizeFormula(src) {
+  const tokens = [];
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (/[0-9.]/.test(c)) {
+      let j = i;
+      while (j < src.length && /[0-9.]/.test(src[j])) j++;
+      tokens.push({ t: "num", v: parseFloat(src.slice(i, j)) });
+      i = j;
+      continue;
+    }
+    if (/[a-zA-Z]/.test(c)) {
+      let j = i;
+      while (j < src.length && /[a-zA-Z0-9_]/.test(src[j])) j++;
+      tokens.push({ t: "id", v: src.slice(i, j) });
+      i = j;
+      continue;
+    }
+    if ("+-*/^(),".includes(c)) {
+      tokens.push({ t: "op", v: c });
+      i++;
+      continue;
+    }
+    throw new Error(`Caractere invalido na formula: "${c}"`);
+  }
+  return tokens;
+}
+
+// ============================================================
 // Generic economics-chart renderer (canvas 2D)
 // ============================================================
 const CHART_COLORS = {
-  acc: "#2563eb",
-  good: "#10b981",
-  bad: "#ef4444",
-  warn: "#f59e0b",
-  muted: "#64748b",
-  ink: "#1e293b",
+  acc: "#2563eb", good: "#10b981", bad: "#ef4444",
+  warn: "#f59e0b", muted: "#64748b", ink: "#1e293b",
 };
 
 const CHART_MARGIN = { left: 46, right: 18, top: 18, bottom: 34 };
@@ -28,7 +153,6 @@ function renderChart(ctx, cfg, w, h) {
 
   const m = chartMap(cfg, w, h);
 
-  // axes
   ctx.strokeStyle = "#cbd5e1";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -49,7 +173,6 @@ function renderChart(ctx, cfg, w, h) {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
-  // guide (dotted) lines
   (cfg.guides || []).forEach((g) => {
     ctx.save();
     ctx.setLineDash([3, 3]);
@@ -62,7 +185,6 @@ function renderChart(ctx, cfg, w, h) {
     ctx.restore();
   });
 
-  // horizontal reference lines
   (cfg.hlines || []).forEach((hl) => {
     ctx.save();
     if (hl.dashed) ctx.setLineDash([5, 4]);
@@ -80,8 +202,14 @@ function renderChart(ctx, cfg, w, h) {
     ctx.restore();
   });
 
-  // curves
   (cfg.curves || []).forEach((c) => {
+    let fn;
+    try {
+      fn = typeof c.formula === "string" ? compileFormula(c.formula) : c.fn;
+    } catch (e) {
+      console.error("[inteco] formula invalida:", c.formula, e);
+      return;
+    }
     ctx.save();
     if (c.dashed) ctx.setLineDash([6, 4]);
     ctx.strokeStyle = CHART_COLORS[c.color] || c.color || CHART_COLORS.ink;
@@ -92,33 +220,30 @@ function renderChart(ctx, cfg, w, h) {
     let started = false;
     for (let i = 0; i <= steps; i++) {
       const x = a + ((b - a) * i) / steps;
-      const y = c.fn(x);
+      let y;
+      try { y = fn(x); } catch (e) { y = null; }
       if (y == null || isNaN(y) || y < cfg.ymin - (cfg.ymax - cfg.ymin) * 0.3) {
         started = false;
         continue;
       }
       const px = m.x(x);
       const py = m.y(Math.min(Math.max(y, cfg.ymin), cfg.ymax * 1.3));
-      if (!started) {
-        ctx.moveTo(px, py);
-        started = true;
-      } else {
-        ctx.lineTo(px, py);
-      }
+      if (!started) { ctx.moveTo(px, py); started = true; }
+      else ctx.lineTo(px, py);
     }
     ctx.stroke();
     ctx.restore();
 
     if (c.label) {
       const lx = a + (b - a) * (c.labelT ?? 0.82);
-      const ly = c.fn(lx);
+      let ly;
+      try { ly = fn(lx); } catch (e) { ly = cfg.ymin; }
       ctx.fillStyle = CHART_COLORS[c.color] || c.color || CHART_COLORS.ink;
       ctx.font = "bold 11px sans-serif";
       ctx.fillText(c.label, m.x(lx) + 4, m.y(ly) + (c.labelDy || -6));
     }
   });
 
-  // points
   (cfg.points || []).forEach((p) => {
     ctx.save();
     ctx.fillStyle = CHART_COLORS[p.color] || p.color || CHART_COLORS.ink;
@@ -144,101 +269,4 @@ function mountStaticChart(holderId, cfg, opts) {
   canvas.style.cursor = "default";
   const ctx = canvas.getContext("2d");
   renderChart(ctx, cfg, w, h);
-}
-
-// ============================================================
-// Chart definitions matching the original exam figures
-// ============================================================
-function chartQ2() {
-  return {
-    xmin: 0, xmax: 10, ymin: 0, ymax: 10,
-    xlabel: "Bens A", ylabel: "Bens B",
-    curves: [
-      { fn: (x) => 10 - 0.35 * x - 0.03 * x * x, domain: [0, 10], color: "acc", samples: 150 },
-    ],
-    points: [
-      { x: 5, y: 7.5, label: "X", color: "acc" },
-      { x: 3, y: 3, label: "Y", color: "muted" },
-      { x: 8, y: 7.6, label: "Z", color: "bad" },
-    ],
-  };
-}
-
-function chartQ4a() {
-  return {
-    xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P",
-    curves: [
-      { fn: (x) => 10 - 0.8 * x, domain: [0, 10], color: "acc", label: "D", labelT: 0.85, labelDy: -6 },
-      { fn: (x) => 1 + 0.5 * x, domain: [0, 10], color: "good", label: "S", labelT: 0.9, labelDy: 14 },
-    ],
-  };
-}
-
-function chartQ4c() {
-  return {
-    xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P",
-    curves: [
-      { fn: (x) => 1 + 0.5 * x, domain: [0, 10], color: "good", label: "S₀", labelT: 0.9, labelDy: 14 },
-      { fn: (x) => 4.5 + 0.5 * x, domain: [0, 5.5], color: "bad", label: "S₁", labelT: 0.85, labelDy: 14 },
-      { fn: (x) => 10 - 0.8 * x, domain: [0, 10], color: "acc", label: "D", labelT: 0.85, labelDy: -6 },
-    ],
-  };
-}
-
-function chartQ5() {
-  return {
-    xmin: 0, xmax: 12, ymin: 0, ymax: 12, xlabel: "Q", ylabel: "P",
-    curves: [
-      { fn: (x) => 12 - x, domain: [0, 12], color: "acc" },
-    ],
-    points: [
-      { x: 3, y: 9, label: "A", color: "ink" },
-      { x: 2, y: 10, label: "B", color: "ink" },
-    ],
-  };
-}
-
-function chartQ6() {
-  const qStar = 5.7142857, pStar = 5.4285714;
-  return {
-    xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P",
-    curves: [
-      { fn: (x) => 10 - 0.8 * x, domain: [0, 10], color: "acc", label: "D", labelT: 0.9, labelDy: -6 },
-      { fn: (x) => 2 + 0.6 * x, domain: [0, 10], color: "good", label: "S", labelT: 0.88, labelDy: 14 },
-    ],
-    guides: [
-      { x1: qStar, y1: 0, x2: qStar, y2: pStar },
-      { x1: 0, y1: pStar, x2: qStar, y2: pStar },
-    ],
-    points: [{ x: qStar, y: pStar, label: "", color: "ink" }],
-  };
-}
-
-function chartQ8() {
-  const a = 2.0, b = 0.15, D = 1.5, F = 6.0;
-  return {
-    xmin: 0, xmax: 15, ymin: 0, ymax: 12, xlabel: "Q (firma)", ylabel: "Custo/Preço",
-    curves: [
-      { fn: (x) => D / x + a + b * x, domain: [0.6, 15], color: "muted", dashed: true, label: "CVM", samples: 200, labelT: 0.62, labelDy: 12 },
-      { fn: (x) => (F + D) / x + a + b * x, domain: [0.6, 15], color: "ink", dashed: true, label: "CTM", samples: 200, labelT: 0.78, labelDy: -8 },
-      { fn: (x) => a + 2 * b * x, domain: [0.6, 15], color: "acc", label: "CMg", samples: 200, labelT: 0.5, labelDy: -8 },
-    ],
-    hlines: [
-      { y: 6, color: "good", label: "Lucro" },
-      { y: 3.5, color: "warn", dashed: true, label: "Prejuízo" },
-      { y: 2.5, color: "bad", dashed: true, label: "Shutdown" },
-    ],
-  };
-}
-
-function chartQ9() {
-  return {
-    xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P",
-    curves: [
-      { fn: (x) => 10 - x, domain: [0, 10], color: "acc", label: "D=RMe", labelT: 0.72, labelDy: -6 },
-      { fn: (x) => 10 - 2 * x, domain: [0, 5], color: "acc", dashed: true, label: "RMg", labelT: 0.55, labelDy: -8 },
-      { fn: (x) => 2 + 0.2 * x, domain: [0, 10], color: "good", label: "CMg", labelT: 0.82, labelDy: 12 },
-      { fn: (x) => 3 + 0.4 * x, domain: [0, 10], color: "muted", label: "CTM", labelT: 0.75, labelDy: -8 },
-    ],
-  };
 }

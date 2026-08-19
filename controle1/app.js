@@ -27,6 +27,32 @@ function getTabToken() {
   return t;
 }
 
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+// Runs one init step in isolation: a failure here (e.g. a stale cached
+// asset mismatched with a fresh one) must not take the rest of the exam down.
+function safe(label, fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.error(`[inteco] falha em "${label}":`, e);
+    logEvent("init_error", `${label}: ${e && e.message}`);
+  }
+}
+async function safeAsync(label, fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    console.error(`[inteco] falha em "${label}":`, e);
+    logEvent("init_error", `${label}: ${e && e.message}`);
+    return null;
+  }
+}
+
 // ============================================================
 // LOGIN
 // ============================================================
@@ -72,7 +98,7 @@ async function doLogin() {
       tab_token: data.tab_token,
     };
     REMAINING_SECONDS = data.remaining_seconds;
-    startExam(data.answers || {});
+    await startExam(data.answers || {});
   } catch (err) {
     showLoginError(err.message || "Não foi possível entrar. Tente novamente.");
   } finally {
@@ -89,7 +115,7 @@ inMatricula.addEventListener("keydown", (e) => {
 // ============================================================
 // EXAM START
 // ============================================================
-function startExam(savedAnswers) {
+async function startExam(savedAnswers) {
   loginScreen.classList.add("hidden");
   appHeader.classList.remove("hidden");
   examWrap.classList.remove("hidden");
@@ -98,19 +124,13 @@ function startExam(savedAnswers) {
   document.getElementById("who-curso").textContent =
     `${SESSION.curso || ""} · matrícula ${SESSION.matricula}`;
 
-  safe("buildWordCloud", buildWordCloud);
-  safe("buildQ1", buildQ1);
+  const questions = (await safeAsync("loadQuestions", async () => {
+    const res = await fetch(`${API_BASE}/api/questions`);
+    const data = await res.json();
+    return data.questions || [];
+  })) || [];
 
-  safe("chartQ2", () => mountStaticChart("q2-chart-holder", chartQ2()));
-  safe("chartQ4a", () => mountStaticChart("q4a-chart-holder", chartQ4a()));
-  safe("chartQ4c", () => mountStaticChart("q4c-chart-holder", chartQ4c()));
-  safe("chartQ5", () => mountStaticChart("q5-chart-holder", chartQ5()));
-  safe("chartQ8", () => mountStaticChart("q8-chart-holder", chartQ8(), { h: 320 }));
-
-  safe("canvasQ6", () => buildCanvasTool("q6-canvas-holder", "q6_canvas", chartQ6()));
-  safe("canvasQ7", () => buildCanvasTool("q7-canvas-holder", "q7_canvas", null));
-  safe("canvasQ9", () => buildCanvasTool("q9-canvas-holder", "q9_canvas", chartQ9()));
-
+  safe("renderQuestions", () => renderQuestions(questions));
   safe("wireInputs", wireInputs);
   safe("applySavedAnswers", () => applySavedAnswers(savedAnswers));
   safe("startFocusTracking", startFocusTracking);
@@ -120,111 +140,190 @@ function startExam(savedAnswers) {
   document.getElementById("submit-btn").addEventListener("click", () => onSubmitClick(true));
 }
 
-// Runs one init step in isolation: a failure here (e.g. a stale cached
-// asset mismatched with a fresh one) must not take the rest of the exam down.
-function safe(label, fn) {
-  try {
-    fn();
-  } catch (e) {
-    console.error(`[inteco] falha ao iniciar "${label}":`, e);
-    logEvent("init_error", `${label}: ${e && e.message}`);
-  }
+// ============================================================
+// DYNAMIC QUESTION RENDERING (data-driven from /api/questions)
+// ============================================================
+function chartHolderId(qkey, part) { return `chart-${qkey}-${part.id}`; }
+function canvasHolderId(qkey, part) { return `canvas-${qkey}-${part.id}`; }
+
+function partPointsBadge(part) {
+  if (part.points == null) return "";
+  return ` <span class="pts">(${part.points} ${part.points === 1 ? "ponto" : "pontos"})</span>`;
 }
 
-// ============================================================
-// WORD CLOUD (Q1 decorative + word bank)
-// ============================================================
-const Q1_CLOUD_WORDS = [
-  { w: "trade-offs", size: 1.75, color: "warn", top: "10%", left: "6%", rot: -3 },
-  { w: "abre mão", size: 1.15, color: "acc", top: "62%", left: "20%", rot: 2 },
-  { w: "margem", size: 1.3, color: "good", top: "8%", left: "26%", rot: -1 },
-  { w: "incentivos", size: 1.4, color: "acc", top: "40%", left: "44%", rot: 3 },
-  { w: "comércio", size: 1.25, color: "bad", top: "8%", left: "44%", rot: -2 },
-  { w: "mercados", size: 1.15, color: "muted", top: "64%", left: "58%", rot: 1 },
-  { w: "governo", size: 1.15, color: "good", top: "10%", left: "68%", rot: -2 },
-  { w: "produtividade", size: 1.25, color: "warn", top: "58%", left: "76%", rot: 2 },
-  { w: "moeda", size: 1.1, color: "bad", top: "12%", left: "84%", rot: -3 },
-  { w: "inflação", size: 1.15, color: "acc", top: "70%", left: "88%", rot: 1 },
-  { w: "desemprego", size: 1.05, color: "muted", top: "40%", left: "2%", rot: 2 },
-];
-
-function buildWordCloud() {
-  const holder = document.getElementById("q1-wordcloud");
-  holder.innerHTML = Q1_CLOUD_WORDS.map(
-    (item) => `<span style="font-size:${item.size}rem;color:var(--${item.color});top:${item.top};left:${item.left};transform:rotate(${item.rot}deg)">${item.w}</span>`
-  ).join("");
+function wordOptionsHtml(words) {
+  return `<option value="">Selecione...</option>` +
+    words.map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join("");
 }
 
-// ============================================================
-// Q1 - fill-in-the-blank builder
-// ============================================================
-const Q1_WORDS = [
-  "trade-offs", "abre mão", "margem", "incentivos", "comércio",
-  "mercados", "governo", "produtividade", "moeda", "inflação", "desemprego",
-];
-
-const Q1_ITEMS = [
-  "As pessoas enfrentam ___.",
-  "O custo de alguma coisa é aquilo de que você ___ para obtê-la.",
-  "Pessoas racionais pensam na ___.",
-  "Pessoas reagem a ___.",
-  "O ___ pode ser bom para todos.",
-  "Os ___ são geralmente uma boa forma de organizar a atividade econômica.",
-  "O ___ pode, às vezes, melhorar os resultados do mercado.",
-  "O padrão de vida de um país depende de sua ___ em produzir bens e serviços.",
-  "Os preços sobem quando o governo imprime ___ demais.",
-  "A sociedade enfrenta um trade-off de curto prazo entre ___ e ___ (duas lacunas).",
-];
-
-function q1OptionsHtml() {
-  return (
-    `<option value="">Selecione...</option>` +
-    Q1_WORDS.map((w) => `<option value="${w}">${w}</option>`).join("")
-  );
-}
-
-function buildQ1() {
-  const holder = document.getElementById("q1-blanks");
+function renderFillBlanks(qkey, part) {
+  const cfg = part.config || {};
+  const words = cfg.word_bank || [];
   let html = "";
-  Q1_ITEMS.forEach((text, idx) => {
-    const n = idx + 1;
-    if (n === 10) {
-      html += `
-        <div class="blank-row">
-          <span class="n">${n}.</span>
-          <span style="flex:2">${text}</span>
-          <select data-qid="q1_10a" data-q1group="1">${q1OptionsHtml()}</select>
-          <select data-qid="q1_10b" data-q1group="1">${q1OptionsHtml()}</select>
-        </div>`;
-    } else {
-      html += `
-        <div class="blank-row">
-          <span class="n">${n}.</span>
-          <span style="flex:2">${text}</span>
-          <select data-qid="q1_${n}" data-q1group="1">${q1OptionsHtml()}</select>
-        </div>`;
+  if (cfg.show_wordcloud) {
+    html += `<div class="wordcloud" data-wordcloud-words='${escapeHtml(JSON.stringify(words))}'></div>`;
+  } else if (words.length) {
+    html += `<div class="wordbank">${words.map((w) => `<span>${escapeHtml(w)}</span>`).join("")}</div>`;
+  }
+  html += `<div>`;
+  (cfg.items || []).forEach((text, itemIdx) => {
+    const blankCount = (text.match(/___/g) || []).length || 1;
+    let selectsHtml = "";
+    for (let b = 0; b < blankCount; b++) {
+      const qid = `${qkey}_${part.id}_i${itemIdx}_b${b}`;
+      selectsHtml += `<select data-qid="${qid}" data-fillgroup="${qkey}_${part.id}">${wordOptionsHtml(words)}</select>`;
     }
+    html += `<div class="blank-row"><span class="n">${itemIdx + 1}.</span><span style="flex:2">${escapeHtml(text)}</span>${selectsHtml}</div>`;
   });
-  holder.innerHTML = html;
+  html += `</div>`;
+  return html;
+}
 
-  holder.querySelectorAll("select[data-q1group]").forEach((sel) => {
-    sel.addEventListener("change", checkQ1Duplicates);
+function renderEssay(qkey, part) {
+  const qid = `${qkey}_${part.id}`;
+  const cfg = part.config || {};
+  const label = part.label
+    ? `<label class="part-label">${escapeHtml(part.label)}${partPointsBadge(part)}</label>`
+    : "";
+  return `<div class="q-part">${label}<textarea data-qid="${qid}" rows="${cfg.rows || 3}" placeholder="${escapeHtml(cfg.placeholder || "")}"></textarea></div>`;
+}
+
+function renderNumberGroup(qkey, part) {
+  const label = part.label
+    ? `<label class="part-label">${escapeHtml(part.label)}${partPointsBadge(part)}</label>`
+    : "";
+  const fields = (part.config && part.config.fields) || [];
+  const cols = fields.length <= 2 ? "grid-2" : "grid-3";
+  const inputs = fields.map((f) => {
+    const qid = `${qkey}_${part.id}_${f.key}`;
+    return `<div><label style="font-size:0.8rem;color:var(--muted)">${escapeHtml(f.label)}</label><input type="number" data-qid="${qid}"></div>`;
+  }).join("");
+  return `<div class="q-part">${label}<div class="${cols}">${inputs}</div></div>`;
+}
+
+function renderSelect(qkey, part) {
+  const qid = `${qkey}_${part.id}`;
+  const options = (part.config && part.config.options) || [];
+  const label = part.label ? `<span style="flex:2">${escapeHtml(part.label)}</span>` : "<span></span>";
+  const pts = part.points != null
+    ? `<div style="text-align:right;margin-top:2px"><span class="pts">(${part.points} ${part.points === 1 ? "ponto" : "pontos"})</span></div>` : "";
+  return `<div class="q-part"><div class="blank-row">${label}<select data-qid="${qid}" style="flex:1"><option value="">Selecione...</option>${options.map((o) => `<option>${escapeHtml(o)}</option>`).join("")}</select></div>${pts}</div>`;
+}
+
+function renderMatrixSelect(qkey, part) {
+  const label = part.label
+    ? `<label class="part-label">${escapeHtml(part.label)}${partPointsBadge(part)}</label>`
+    : "";
+  const cfg = part.config || {};
+  const rows = cfg.rows || [];
+  const options = cfg.options || [];
+  const optHtml = `<option value="">Selecione...</option>` + options.map((o) => `<option>${escapeHtml(o)}</option>`).join("");
+  const rowsHtml = rows.map((r, i) => {
+    const qid = `${qkey}_${part.id}_r${i}`;
+    return `<tr><td>${escapeHtml(r)}</td><td><select data-qid="${qid}">${optHtml}</select></td></tr>`;
+  }).join("");
+  return `<div class="q-part">${label}<table class="matrix-table"><thead><tr><th>Bem</th><th>Classificação</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+}
+
+function renderNote(part) {
+  const text = escapeHtml((part.config && part.config.text) || "").replace(/\n/g, "<br>");
+  return `<div class="note-box">${text}</div>`;
+}
+
+function renderQuestions(questions) {
+  let html = "";
+  questions.forEach((q) => {
+    html += `<div class="q-card"><h2>${escapeHtml(q.title)} <span class="pts">(${q.points} pontos)</span></h2>`;
+    if (q.intro) html += `<div class="intro">${escapeHtml(q.intro)}</div>`;
+    (q.parts || []).forEach((part) => {
+      if (part.type === "chart") {
+        html += `<div id="${chartHolderId(q.qkey, part)}"></div>`;
+      } else if (part.type === "canvas_draw") {
+        html += `<div class="q-part" id="${canvasHolderId(q.qkey, part)}"></div>`;
+      } else if (part.type === "fill_blanks") {
+        html += renderFillBlanks(q.qkey, part);
+      } else if (part.type === "essay") {
+        html += renderEssay(q.qkey, part);
+      } else if (part.type === "number_group") {
+        html += renderNumberGroup(q.qkey, part);
+      } else if (part.type === "select") {
+        html += renderSelect(q.qkey, part);
+      } else if (part.type === "matrix_select") {
+        html += renderMatrixSelect(q.qkey, part);
+      } else if (part.type === "note") {
+        html += renderNote(part);
+      }
+    });
+    html += `</div>`;
+  });
+  html += `<footer class="note">Todas as respostas são salvas automaticamente. Ao terminar, clique em "Enviar avaliação" no topo da página.</footer>`;
+  examWrap.innerHTML = html;
+
+  questions.forEach((q) => {
+    (q.parts || []).forEach((part) => {
+      if (part.type === "chart") {
+        safe(`chart:${q.qkey}.${part.id}`, () => mountStaticChart(chartHolderId(q.qkey, part), part.config));
+      } else if (part.type === "canvas_draw") {
+        safe(`canvas:${q.qkey}.${part.id}`, () =>
+          buildCanvasTool(canvasHolderId(q.qkey, part), `${q.qkey}_${part.id}`, (part.config && part.config.background_chart) || null)
+        );
+      }
+    });
+  });
+
+  document.querySelectorAll(".wordcloud[data-wordcloud-words]").forEach((el) => {
+    safe("wordcloud", () => {
+      const words = JSON.parse(el.dataset.wordcloudWords);
+      buildWordCloudGeneric(el, words);
+    });
+  });
+
+  wireFillBlankDuplicateChecks();
+}
+
+// ============================================================
+// WORD CLOUD (generic, deterministic pseudo-random layout)
+// ============================================================
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function buildWordCloudGeneric(container, words) {
+  const palette = ["acc", "good", "bad", "warn", "muted"];
+  container.innerHTML = words.map((w, i) => {
+    const seed = hashStr(w + "|" + i);
+    const size = (1.0 + (seed % 100) / 130).toFixed(2);
+    const top = 8 + (seed % 68);
+    const left = 2 + ((seed >> 3) % 86);
+    const rot = -4 + (seed % 9);
+    const color = palette[seed % palette.length];
+    return `<span style="font-size:${size}rem;color:var(--${color});top:${top}%;left:${left}%;transform:rotate(${rot}deg)">${escapeHtml(w)}</span>`;
+  }).join("");
+}
+
+function refreshFillBlankDuplicates() {
+  const groups = {};
+  document.querySelectorAll("select[data-fillgroup]").forEach((sel) => {
+    const g = sel.dataset.fillgroup;
+    (groups[g] = groups[g] || []).push(sel);
+  });
+  Object.values(groups).forEach((selects) => {
+    const counts = {};
+    selects.forEach((s) => { if (s.value) counts[s.value] = (counts[s.value] || 0) + 1; });
+    selects.forEach((s) => s.classList.toggle("dup", s.value && counts[s.value] > 1));
   });
 }
 
-function checkQ1Duplicates() {
-  const selects = Array.from(document.querySelectorAll("select[data-q1group]"));
-  const counts = {};
-  selects.forEach((s) => {
-    if (s.value) counts[s.value] = (counts[s.value] || 0) + 1;
-  });
-  selects.forEach((s) => {
-    s.classList.toggle("dup", s.value && counts[s.value] > 1);
+function wireFillBlankDuplicateChecks() {
+  document.querySelectorAll("select[data-fillgroup]").forEach((sel) => {
+    sel.addEventListener("change", refreshFillBlankDuplicates);
   });
 }
 
 // ============================================================
-// CANVAS DRAW TOOL (Q6, Q7, Q9) - optional reference chart background
+// CANVAS DRAW TOOL - optional reference chart background
 // ============================================================
 function buildCanvasTool(holderId, qid, backgroundCfg) {
   const holder = document.getElementById(holderId);
@@ -275,11 +374,7 @@ function buildCanvasTool(holderId, qid, backgroundCfg) {
     return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
   }
 
-  function start(e) {
-    e.preventDefault();
-    drawing = true;
-    last = pos(e);
-  }
+  function start(e) { e.preventDefault(); drawing = true; last = pos(e); }
   function move(e) {
     if (!drawing) return;
     e.preventDefault();
@@ -323,10 +418,7 @@ function buildCanvasTool(holderId, qid, backgroundCfg) {
   canvas._restoreFromDataUrl = (dataUrl) => {
     if (!dataUrl) return;
     const img = new Image();
-    img.onload = () => {
-      resetCanvas();
-      ctx.drawImage(img, 0, 0);
-    };
+    img.onload = () => { resetCanvas(); ctx.drawImage(img, 0, 0); };
     img.src = dataUrl;
   };
 }
@@ -338,12 +430,8 @@ function wireInputs() {
   document.querySelectorAll("[data-qid]").forEach((el) => {
     if (el.tagName === "CANVAS") return;
     const evt = el.tagName === "SELECT" ? "change" : "input";
-    el.addEventListener(evt, () => {
-      queueSave(el.dataset.qid, el.value);
-    });
-    el.addEventListener("paste", () => {
-      logEvent("paste_attempt", `qid=${el.dataset.qid}`);
-    });
+    el.addEventListener(evt, () => queueSave(el.dataset.qid, el.value));
+    el.addEventListener("paste", () => logEvent("paste_attempt", `qid=${el.dataset.qid}`));
   });
 }
 
@@ -355,11 +443,9 @@ function applySavedAnswers(saved) {
   });
   document.querySelectorAll("canvas[data-canvas-for]").forEach((canvas) => {
     const qid = canvas.dataset.canvasFor;
-    if (saved[qid] && canvas._restoreFromDataUrl) {
-      canvas._restoreFromDataUrl(saved[qid]);
-    }
+    if (saved[qid] && canvas._restoreFromDataUrl) canvas._restoreFromDataUrl(saved[qid]);
   });
-  checkQ1Duplicates();
+  refreshFillBlankDuplicates();
 }
 
 function clearAllInputsLocally() {
@@ -370,7 +456,7 @@ function clearAllInputsLocally() {
   document.querySelectorAll("canvas[data-canvas-for]").forEach((canvas) => {
     if (canvas._resetCanvas) canvas._resetCanvas();
   });
-  checkQ1Duplicates();
+  refreshFillBlankDuplicates();
 }
 
 // ============================================================
@@ -420,7 +506,7 @@ async function flushSaveQueue() {
 }
 
 // ============================================================
-// TIMER (1h50 = 110 min), server-authoritative via heartbeat
+// TIMER (server-authoritative via heartbeat)
 // ============================================================
 const timerBadge = document.getElementById("timer-badge");
 
@@ -491,7 +577,6 @@ function handleSessionConflict(data) {
       "Esta avaliação foi aberta em outra aba, janela ou dispositivo. Esta aba foi desconectada e não pode mais editar respostas."
     );
   } else {
-    // expired or already submitted
     SUBMITTED = true;
     lockForm();
     submittedBanner.classList.remove("hidden");
@@ -510,7 +595,7 @@ function lockOut(title, msg) {
 }
 
 // ============================================================
-// FOCUS / TAB-SWITCH TRACKING -> alert + reset answers
+// FOCUS / TAB-SWITCH TRACKING -> in-page modal + reset answers
 // ============================================================
 const focusBadge = document.getElementById("focus-badge");
 
@@ -603,8 +688,6 @@ function startFocusTracking() {
   document.getElementById("violation-ack-btn").addEventListener("click", () => {
     violationOverlay.classList.add("hidden");
     resetAnswersAfterViolation();
-    // small delay before re-arming: avoids a stray blur/focus right at the
-    // moment the modal closes being misread as a new violation
     setTimeout(() => { VIOLATION_MODAL_OPEN = false; }, 300);
   });
 
@@ -695,7 +778,6 @@ async function onSubmitClick(needsConfirm, autoMessage) {
         handleSessionConflict(data);
         return;
       }
-      // expired/already_submitted -> treat as success (already locked server-side)
     }
     SUBMITTED = true;
     clearInterval(TIMER_INTERVAL);
@@ -715,8 +797,6 @@ function lockForm() {
   document.querySelectorAll("[data-qid], select, textarea, input").forEach((el) => {
     el.disabled = true;
   });
-  document.querySelectorAll("canvas").forEach((c) => {
-    c.style.pointerEvents = "none";
-  });
+  document.querySelectorAll("canvas").forEach((c) => { c.style.pointerEvents = "none"; });
   document.getElementById("submit-btn").classList.add("hidden");
 }

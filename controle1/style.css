@@ -150,6 +150,12 @@ table.mini input { text-align: center; padding: 6px; }
 .matrix-table td { text-align: center; }
 .matrix-table select { min-width: 140px; }
 
+.note-box {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 10px 14px; font-size: 0.85rem; color: #1e3a8a; margin: 10px 0;
+  white-space: pre-line;
+}
+
 .canvas-tool { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .canvas-tool canvas { display: block; width: 100%; touch-action: none; background: white; cursor: crosshair; }
 .canvas-toolbar { display: flex; gap: 8px; padding: 6px 8px; background: #f8fafc; border-top: 1px solid var(--border); }

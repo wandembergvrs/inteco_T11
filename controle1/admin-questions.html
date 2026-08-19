@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banco de questões - INTECO T13</title>
+<style>
+  :root { --acc:#2563eb; --muted:#64748b; --good:#10b981; --warn:#f59e0b; --bad:#ef4444; --border:#e2e8f0; --bg:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: #1e293b; margin: 0; padding: 20px 16px 60px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 18px; }
+  label { display: block; font-weight: 600; font-size: 0.82rem; margin: 10px 0 4px; }
+  input[type=text], input[type=number], input[type=password], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.9rem; font-family: inherit; background: white;
+  }
+  textarea { min-height: 60px; font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; }
+  button { padding: 8px 14px; border: none; border-radius: 8px; background: var(--acc); color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+  button.secondary { background: white; color: var(--acc); border: 1px solid var(--acc); }
+  button.danger { background: white; color: var(--bad); border: 1px solid var(--bad); }
+  button.small { padding: 4px 9px; font-size: 0.78rem; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+  .q-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .q-item:last-child { border-bottom: none; }
+  .q-item .title { font-weight: 600; flex: 1; }
+  .q-item .title small { display: block; font-weight: 400; color: var(--muted); font-size: 0.75rem; }
+  .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: var(--muted); }
+  .badge.off { background: #fef2f2; color: var(--bad); }
+  #err { color: var(--bad); font-size: 0.85rem; margin: 8px 0; }
+  #msg { color: #047857; font-size: 0.85rem; margin: 8px 0; }
+  .part-editor { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin: 10px 0; background: #fbfcfe; }
+  .part-editor .row.top { justify-content: space-between; }
+  .hint { color: var(--muted); font-size: 0.72rem; margin: 2px 0 6px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  #editor-panel { display: none; }
+  #preview-canvas-holder canvas { display: block; max-width: 100%; border: 1px solid var(--border); border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Banco de questões</h1>
+  <p class="sub">INTECO T13 · Escolha quais questões ficam disponíveis na prova, edite as existentes ou crie novas.</p>
+
+  <div class="card">
+    <label for="token">Token de administração</label>
+    <input type="password" id="token" placeholder="Cole o ADMIN_TOKEN">
+    <div class="row" style="margin-top:10px">
+      <button id="btn-load">Carregar banco de questões</button>
+      <button id="btn-new" class="secondary" disabled>+ Nova questão</button>
+    </div>
+    <div id="err"></div>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card" id="list-panel" style="display:none">
+    <div id="q-list"></div>
+  </div>
+
+  <div class="card" id="editor-panel">
+    <h2 id="editor-title" style="font-size:1.05rem;margin-top:0">Questão</h2>
+
+    <label>Chave interna (qkey) <span class="hint" style="display:inline">— identificador único, ex.: q11</span></label>
+    <input type="text" id="f-qkey">
+
+    <label>Título</label>
+    <input type="text" id="f-title">
+
+    <div class="grid-2">
+      <div><label>Pontos totais</label><input type="number" id="f-points"></div>
+      <div><label>Habilitada na prova?</label>
+        <select id="f-enabled"><option value="1">Sim</option><option value="0">Não</option></select>
+      </div>
+    </div>
+
+    <label>Enunciado / contexto (introdução)</label>
+    <textarea id="f-intro" style="font-family:inherit;min-height:70px"></textarea>
+
+    <h3 style="font-size:0.92rem;margin:18px 0 6px">Partes da questão</h3>
+    <div id="parts-container"></div>
+
+    <div class="row" style="margin-top:8px">
+      <select id="new-part-type" style="width:auto">
+        <option value="essay">Dissertativa (texto livre)</option>
+        <option value="number_group">Campos numéricos</option>
+        <option value="select">Múltipla escolha (uma pergunta)</option>
+        <option value="matrix_select">Tabela de classificação</option>
+        <option value="fill_blanks">Preencher lacunas</option>
+        <option value="chart">Gráfico (somente leitura)</option>
+        <option value="canvas_draw">Quadro de desenho</option>
+        <option value="note">Texto informativo (caixa destacada)</option>
+      </select>
+      <button type="button" id="btn-add-part" class="secondary small">+ Adicionar parte</button>
+    </div>
+
+    <div class="row" style="margin-top:18px">
+      <button id="btn-save">Salvar questão</button>
+      <button id="btn-cancel" class="secondary" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="charts.js?v=4"></script>
+<script>
+const API_BASE = "https://inteco-t13.duckdns.org";
+let TOKEN = "";
+let QUESTIONS = [];
+let EDITING = null;
+let EDITING_ID = null;
+
+const $ = (sel) => document.querySelector(sel);
+const err = $("#err"), msg = $("#msg");
+
+function showErr(m) { err.textContent = m; msg.textContent = ""; }
+function showMsg(m) { msg.textContent = m; err.textContent = ""; }
+
+async function api(path, opts) {
+  const url = `${API_BASE}${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(TOKEN)}`;
+  const res = await fetch(url, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data.detail && (data.detail.message || data.detail)) || "Erro na requisição");
+  return data;
+}
+
+$("#btn-load").addEventListener("click", async () => {
+  TOKEN = $("#token").value.trim();
+  if (!TOKEN) { showErr("Informe o token."); return; }
+  try {
+    const data = await api("/api/admin/questions");
+    QUESTIONS = data.questions;
+    $("#btn-new").disabled = false;
+    $("#list-panel").style.display = "";
+    renderList();
+    showMsg(`${QUESTIONS.length} questão(ões) carregada(s).`);
+  } catch (e) {
+    showErr(e.message);
+  }
+});
+
+function renderList() {
+  const el = $("#q-list");
+  el.innerHTML = QUESTIONS.map((q, i) => `
+    <div class="q-item">
+      <div class="row">
+        <button type="button" class="secondary small" data-move="-1" data-id="${q.id}" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="secondary small" data-move="1" data-id="${q.id}" ${i === QUESTIONS.length - 1 ? "disabled" : ""}>↓</button>
+      </div>
+      <div class="title">${escapeHtml(q.title)} <span class="badge">${q.points} pts</span> ${q.enabled ? "" : '<span class="badge off">desativada</span>'}
+        <small>${escapeHtml(q.qkey)} · ${q.parts.length} parte(s)</small>
+      </div>
+      <label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;margin:0">
+        <input type="checkbox" data-toggle="${q.id}" ${q.enabled ? "checked" : ""}> na prova
+      </label>
+      <button type="button" class="secondary small" data-edit="${q.id}">Editar</button>
+      <button type="button" class="danger small" data-del="${q.id}">Excluir</button>
+    </div>
+  `).join("");
+
+  el.querySelectorAll("[data-toggle]").forEach((cb) => {
+    cb.addEventListener("change", async () => {
+      try { await api(`/api/admin/questions/${cb.dataset.toggle}/toggle`, { method: "POST" }); await reload(); }
+      catch (e) { showErr(e.message); }
+    });
+  });
+  el.querySelectorAll("[data-edit]").forEach((b) => {
+    b.addEventListener("click", () => openEditor(QUESTIONS.find((q) => q.id == b.dataset.edit)));
+  });
+  el.querySelectorAll("[data-del]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      if (!confirm("Excluir esta questão do banco? Isso não apaga respostas já enviadas por alunos.")) return;
+      try { await api(`/api/admin/questions/${b.dataset.del}`, { method: "DELETE" }); await reload(); }
+      catch (e) { showErr(e.message); }
+    });
+  });
+  el.querySelectorAll("[data-move]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const id = parseInt(b.dataset.id);
+      const dir = parseInt(b.dataset.move);
+      const idx = QUESTIONS.findIndex((q) => q.id === id);
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= QUESTIONS.length) return;
+      [QUESTIONS[idx], QUESTIONS[swapIdx]] = [QUESTIONS[swapIdx], QUESTIONS[idx]];
+      try { await api("/api/admin/questions/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: QUESTIONS.map((q) => q.id) }) }); await reload(); }
+      catch (e) { showErr(e.message); }
+    });
+  });
+}
+
+async function reload() {
+  const data = await api("/api/admin/questions");
+  QUESTIONS = data.questions;
+  renderList();
+}
+
+$("#btn-new").addEventListener("click", () => openEditor(null));
+$("#btn-cancel").addEventListener("click", () => { $("#editor-panel").style.display = "none"; });
+
+function openEditor(question) {
+  EDITING_ID = question ? question.id : null;
+  EDITING = question ? JSON.parse(JSON.stringify(question)) : { qkey: "", title: "", points: 0, intro: "", enabled: true, parts: [] };
+  $("#editor-title").textContent = question ? `Editando: ${question.title}` : "Nova questão";
+  $("#f-qkey").value = EDITING.qkey;
+  $("#f-title").value = EDITING.title;
+  $("#f-points").value = EDITING.points;
+  $("#f-enabled").value = EDITING.enabled ? "1" : "0";
+  $("#f-intro").value = EDITING.intro || "";
+  renderParts();
+  $("#editor-panel").style.display = "";
+  $("#editor-panel").scrollIntoView({ behavior: "smooth" });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function linesText(arr) { return (arr || []).join("\n"); }
+function linesOf(text) { return String(text || "").split("\n").map((s) => s.trim()).filter(Boolean); }
+
+function serializeCurves(curves) {
+  return (curves || []).map((c) => `${c.label || ""}|${c.formula}|${c.color || "acc"}|${c.domain[0]}|${c.domain[1]}|${c.dashed ? 1 : 0}`).join("\n");
+}
+function parseCurves(text) {
+  return linesOf(text).map((line) => {
+    const [label, formula, color, a, b, dashed] = line.split("|").map((s) => s.trim());
+    return { label: label || "", formula, color: color || "acc", domain: [parseFloat(a), parseFloat(b)], dashed: dashed === "1" };
+  });
+}
+function serializePoints(points) {
+  return (points || []).map((p) => `${p.label || ""}|${p.x}|${p.y}|${p.color || "ink"}`).join("\n");
+}
+function parsePoints(text) {
+  return linesOf(text).map((line) => {
+    const [label, x, y, color] = line.split("|").map((s) => s.trim());
+    return { label: label || "", x: parseFloat(x), y: parseFloat(y), color: color || "ink" };
+  });
+}
+function serializeHlines(hlines) {
+  return (hlines || []).map((h) => `${h.label || ""}|${h.y}|${h.color || "ink"}|${h.dashed ? 1 : 0}`).join("\n");
+}
+function parseHlines(text) {
+  return linesOf(text).map((line) => {
+    const [label, y, color, dashed] = line.split("|").map((s) => s.trim());
+    return { label: label || "", y: parseFloat(y), color: color || "ink", dashed: dashed === "1" };
+  });
+}
+function serializeFields(fields) {
+  return (fields || []).map((f) => `${f.key}:${f.label}`).join("\n");
+}
+function parseFields(text) {
+  return linesOf(text).map((line) => {
+    const idx = line.indexOf(":");
+    return idx === -1 ? { key: line, label: line } : { key: line.slice(0, idx).trim(), label: line.slice(idx + 1).trim() };
+  });
+}
+
+const PART_TYPE_LABELS = {
+  essay: "Dissertativa", number_group: "Campos numéricos", select: "Múltipla escolha",
+  matrix_select: "Tabela de classificação", fill_blanks: "Preencher lacunas",
+  chart: "Gráfico (leitura)", canvas_draw: "Quadro de desenho", note: "Texto informativo",
+};
+
+function chartFieldsHtml(idx, cfg) {
+  cfg = cfg || { xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P", curves: [], points: [], hlines: [] };
+  return `
+    <div class="grid-4">
+      <div><label>xmin</label><input type="number" id="p${idx}-xmin" value="${cfg.xmin ?? 0}"></div>
+      <div><label>xmax</label><input type="number" id="p${idx}-xmax" value="${cfg.xmax ?? 10}"></div>
+      <div><label>ymin</label><input type="number" id="p${idx}-ymin" value="${cfg.ymin ?? 0}"></div>
+      <div><label>ymax</label><input type="number" id="p${idx}-ymax" value="${cfg.ymax ?? 10}"></div>
+    </div>
+    <div class="grid-2">
+      <div><label>Rótulo eixo X</label><input type="text" id="p${idx}-xlabel" value="${escapeHtml(cfg.xlabel || "Q")}"></div>
+      <div><label>Rótulo eixo Y</label><input type="text" id="p${idx}-ylabel" value="${escapeHtml(cfg.ylabel || "P")}"></div>
+    </div>
+    <label>Curvas <span class="hint" style="display:inline">— uma por linha: rótulo|fórmula(x)|cor|domínio_min|domínio_max|tracejado(0/1)</span></label>
+    <div class="hint">Cores válidas: acc, good, bad, warn, muted, ink. Fórmulas aceitam + − × ÷ ^, sqrt(), abs(), min(), max(). Ex.: D|10 - 0.8*x|acc|0|10|0</div>
+    <textarea id="p${idx}-curves" rows="3">${escapeHtml(serializeCurves(cfg.curves))}</textarea>
+    <label>Pontos marcados <span class="hint" style="display:inline">— um por linha: rótulo|x|y|cor</span></label>
+    <textarea id="p${idx}-points-dsl" rows="2">${escapeHtml(serializePoints(cfg.points))}</textarea>
+    <label>Linhas horizontais de referência <span class="hint" style="display:inline">— uma por linha: rótulo|y|cor|tracejado(0/1)</span></label>
+    <textarea id="p${idx}-hlines" rows="2">${escapeHtml(serializeHlines(cfg.hlines))}</textarea>
+    <button type="button" class="secondary small" data-preview="${idx}">Pré-visualizar gráfico</button>
+    <div id="preview-holder-${idx}" style="margin-top:8px"></div>
+  `;
+}
+
+function partConfigHtml(idx, type, cfg) {
+  cfg = cfg || {};
+  if (type === "essay") {
+    return `
+      <label>Linhas da caixa de texto</label>
+      <input type="number" id="p${idx}-rows" value="${cfg.rows || 3}">
+      <label>Texto de exemplo (placeholder)</label>
+      <input type="text" id="p${idx}-placeholder" value="${escapeHtml(cfg.placeholder || "")}">
+    `;
+  }
+  if (type === "select") {
+    return `
+      <label>Opções <span class="hint" style="display:inline">— uma por linha</span></label>
+      <textarea id="p${idx}-options" rows="3">${escapeHtml(linesText(cfg.options))}</textarea>
+    `;
+  }
+  if (type === "matrix_select") {
+    return `
+      <label>Linhas da tabela (itens a classificar) <span class="hint" style="display:inline">— um por linha</span></label>
+      <textarea id="p${idx}-rows-list" rows="3">${escapeHtml(linesText(cfg.rows))}</textarea>
+      <label>Opções de classificação <span class="hint" style="display:inline">— uma por linha</span></label>
+      <textarea id="p${idx}-options" rows="3">${escapeHtml(linesText(cfg.options))}</textarea>
+    `;
+  }
+  if (type === "number_group") {
+    return `
+      <label>Campos <span class="hint" style="display:inline">— um por linha: chave:Rótulo (ex.: p:Preço (P))</span></label>
+      <textarea id="p${idx}-fields" rows="3">${escapeHtml(serializeFields(cfg.fields))}</textarea>
+    `;
+  }
+  if (type === "fill_blanks") {
+    return `
+      <label>Frases <span class="hint" style="display:inline">— uma por linha; use ___ (três underlines) para cada lacuna</span></label>
+      <textarea id="p${idx}-items" rows="5">${escapeHtml(linesText(cfg.items))}</textarea>
+      <label>Banco de palavras <span class="hint" style="display:inline">— uma por linha</span></label>
+      <textarea id="p${idx}-wordbank" rows="3">${escapeHtml(linesText(cfg.word_bank))}</textarea>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400">
+        <input type="checkbox" id="p${idx}-wordcloud" ${cfg.show_wordcloud ? "checked" : ""}> mostrar nuvem de palavras decorativa
+      </label>
+    `;
+  }
+  if (type === "note") {
+    return `<label>Texto</label><textarea id="p${idx}-text" rows="4">${escapeHtml(cfg.text || "")}</textarea>`;
+  }
+  if (type === "chart") {
+    return chartFieldsHtml(idx, cfg);
+  }
+  if (type === "canvas_draw") {
+    const hasBg = !!cfg.background_chart;
+    return `
+      <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400">
+        <input type="checkbox" id="p${idx}-hasbg" ${hasBg ? "checked" : ""} onchange="document.getElementById('p${idx}-bgfields').style.display=this.checked?'':'none'"> tem gráfico de referência de fundo
+      </label>
+      <div id="p${idx}-bgfields" style="display:${hasBg ? "" : "none"}">
+        ${chartFieldsHtml(idx, cfg.background_chart)}
+      </div>
+    `;
+  }
+  return "";
+}
+
+function renderParts() {
+  const container = $("#parts-container");
+  container.innerHTML = EDITING.parts.map((part, idx) => `
+    <div class="part-editor" data-type="${part.type}" data-idx="${idx}">
+      <div class="row top">
+        <b>${idx + 1}. ${PART_TYPE_LABELS[part.type] || part.type}</b>
+        <div class="row">
+          <button type="button" class="secondary small" data-part-up="${idx}" ${idx === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="secondary small" data-part-down="${idx}" ${idx === EDITING.parts.length - 1 ? "disabled" : ""}>↓</button>
+          <button type="button" class="danger small" data-part-del="${idx}">Remover parte</button>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div><label>Id interno da parte</label><input type="text" id="p${idx}-id" value="${escapeHtml(part.id || "p" + idx)}"></div>
+        <div><label>Pontos desta parte (opcional)</label><input type="number" id="p${idx}-points" value="${part.points ?? ""}"></div>
+      </div>
+      <label>Enunciado da parte (opcional)</label>
+      <input type="text" id="p${idx}-label" value="${escapeHtml(part.label || "")}">
+      ${partConfigHtml(idx, part.type, part.config)}
+    </div>
+  `).join("");
+
+  container.querySelectorAll("[data-part-del]").forEach((b) => {
+    b.addEventListener("click", () => { syncEditingFromForm(); EDITING.parts.splice(parseInt(b.dataset.partDel), 1); renderParts(); });
+  });
+  container.querySelectorAll("[data-part-up]").forEach((b) => {
+    b.addEventListener("click", () => {
+      syncEditingFromForm();
+      const i = parseInt(b.dataset.partUp);
+      [EDITING.parts[i - 1], EDITING.parts[i]] = [EDITING.parts[i], EDITING.parts[i - 1]];
+      renderParts();
+    });
+  });
+  container.querySelectorAll("[data-part-down]").forEach((b) => {
+    b.addEventListener("click", () => {
+      syncEditingFromForm();
+      const i = parseInt(b.dataset.partDown);
+      [EDITING.parts[i + 1], EDITING.parts[i]] = [EDITING.parts[i], EDITING.parts[i + 1]];
+      renderParts();
+    });
+  });
+  container.querySelectorAll("[data-preview]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const idx = b.dataset.preview;
+      const cfg = readChartFields(idx);
+      const holder = document.getElementById(`preview-holder-${idx}`);
+      holder.innerHTML = `<canvas width="500" height="260"></canvas>`;
+      const canvas = holder.querySelector("canvas");
+      try { renderChart(canvas.getContext("2d"), cfg, 500, 260); }
+      catch (e) { holder.innerHTML = `<span style="color:#ef4444;font-size:0.8rem">Erro no gráfico: ${e.message}</span>`; }
+    });
+  });
+}
+
+function readChartFields(idx) {
+  return {
+    xmin: parseFloat($(`#p${idx}-xmin`).value), xmax: parseFloat($(`#p${idx}-xmax`).value),
+    ymin: parseFloat($(`#p${idx}-ymin`).value), ymax: parseFloat($(`#p${idx}-ymax`).value),
+    xlabel: $(`#p${idx}-xlabel`).value, ylabel: $(`#p${idx}-ylabel`).value,
+    curves: parseCurves($(`#p${idx}-curves`).value),
+    points: parsePoints($(`#p${idx}-points-dsl`).value),
+    hlines: parseHlines($(`#p${idx}-hlines`).value),
+  };
+}
+
+// Reads the current form state back into EDITING.parts (called before any
+// structural change like reordering/removing, so in-progress edits aren't lost).
+function syncEditingFromForm() {
+  document.querySelectorAll(".part-editor").forEach((el, idx) => {
+    const type = el.dataset.type;
+    const part = EDITING.parts[idx];
+    part.id = $(`#p${idx}-id`).value || `p${idx}`;
+    part.label = $(`#p${idx}-label`).value;
+    const ptsRaw = $(`#p${idx}-points`).value;
+    part.points = ptsRaw === "" ? null : parseFloat(ptsRaw);
+    if (type === "essay") {
+      part.config = { rows: parseInt($(`#p${idx}-rows`).value) || 3, placeholder: $(`#p${idx}-placeholder`).value };
+    } else if (type === "select") {
+      part.config = { options: linesOf($(`#p${idx}-options`).value) };
+    } else if (type === "matrix_select") {
+      part.config = { rows: linesOf($(`#p${idx}-rows-list`).value), options: linesOf($(`#p${idx}-options`).value) };
+    } else if (type === "number_group") {
+      part.config = { fields: parseFields($(`#p${idx}-fields`).value) };
+    } else if (type === "fill_blanks") {
+      part.config = {
+        items: linesOf($(`#p${idx}-items`).value),
+        word_bank: linesOf($(`#p${idx}-wordbank`).value),
+        show_wordcloud: $(`#p${idx}-wordcloud`).checked,
+      };
+    } else if (type === "note") {
+      part.config = { text: $(`#p${idx}-text`).value };
+    } else if (type === "chart") {
+      part.config = readChartFields(idx);
+    } else if (type === "canvas_draw") {
+      const hasBg = $(`#p${idx}-hasbg`).checked;
+      part.config = { background_chart: hasBg ? readChartFields(idx) : null };
+    }
+  });
+}
+
+function newEmptyPart(type) {
+  const defaults = {
+    essay: { rows: 3, placeholder: "" },
+    select: { options: ["Opção A", "Opção B"] },
+    matrix_select: { rows: ["Item 1"], options: ["Opção A", "Opção B"] },
+    number_group: { fields: [{ key: "valor", label: "Valor" }] },
+    fill_blanks: { items: ["Frase de exemplo com ___."], word_bank: ["palavra"], show_wordcloud: false },
+    note: { text: "" },
+    chart: { xmin: 0, xmax: 10, ymin: 0, ymax: 10, xlabel: "Q", ylabel: "P", curves: [], points: [], hlines: [] },
+    canvas_draw: { background_chart: null },
+  };
+  return { id: `part_${Date.now()}`, type, label: "", points: null, config: defaults[type] || {} };
+}
+
+$("#btn-add-part").addEventListener("click", () => {
+  syncEditingFromForm();
+  EDITING.parts.push(newEmptyPart($("#new-part-type").value));
+  renderParts();
+});
+
+$("#btn-save").addEventListener("click", async () => {
+  syncEditingFromForm();
+  const body = {
+    qkey: $("#f-qkey").value.trim(),
+    title: $("#f-title").value.trim(),
+    points: parseFloat($("#f-points").value) || 0,
+    intro: $("#f-intro").value,
+    enabled: $("#f-enabled").value === "1",
+    parts: EDITING.parts,
+  };
+  if (!body.qkey || !body.title) { showErr("Preencha ao menos a chave (qkey) e o título."); return; }
+  try {
+    if (EDITING_ID) await api(`/api/admin/questions/${EDITING_ID}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    else await api("/api/admin/questions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    $("#editor-panel").style.display = "none";
+    await reload();
+    showMsg("Questão salva com sucesso.");
+  } catch (e) {
+    showErr(e.message);
+  }
+});
+</script>
+</body>
+</html>
