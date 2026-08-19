@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do professor - INTECO T13</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#f8fafc; color:#1e293b; max-width:720px; margin:40px auto; padding:0 16px; }
+  h1 { font-size:1.3rem; }
+  label { display:block; font-weight:600; font-size:0.85rem; margin:14px 0 4px; }
+  input { width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:1rem; }
+  button, a.btn { display:inline-block; margin-top:14px; padding:10px 16px; border:none; border-radius:8px; background:#2563eb; color:white; font-weight:600; cursor:pointer; text-decoration:none; font-size:0.9rem; }
+  #summary { margin-top:24px; }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; }
+  .card { background:white; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; min-width:120px; }
+  .card b { display:block; font-size:1.4rem; }
+  .card span { font-size:0.78rem; color:#64748b; }
+  table { width:100%; border-collapse:collapse; margin-top:16px; font-size:0.85rem; }
+  th, td { border:1px solid #e2e8f0; padding:6px 8px; text-align:left; }
+  th { background:white; }
+  #err { color:#b91c1c; font-size:0.85rem; margin-top:8px; }
+</style>
+</head>
+<body>
+  <h1>Painel do professor - INTECO T13</h1>
+  <label for="token">Token de administração</label>
+  <input type="password" id="token" placeholder="Cole o ADMIN_TOKEN">
+  <div>
+    <button id="load">Carregar resumo</button>
+    <a class="btn" id="dl-answers" href="#" target="_blank">Baixar respostas (CSV)</a>
+    <a class="btn" id="dl-events" href="#" target="_blank">Baixar eventos de aba (CSV)</a>
+  </div>
+  <div id="err"></div>
+
+  <div id="summary"></div>
+
+<script>
+const API_BASE = "https://inteco-t13.duckdns.org";
+
+document.getElementById("load").addEventListener("click", async () => {
+  const token = document.getElementById("token").value.trim();
+  const err = document.getElementById("err");
+  err.textContent = "";
+  document.getElementById("dl-answers").href = `${API_BASE}/api/admin/export.csv?token=${encodeURIComponent(token)}`;
+  document.getElementById("dl-events").href = `${API_BASE}/api/admin/events.csv?token=${encodeURIComponent(token)}`;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/summary?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Erro");
+
+    let rows = data.top_offenders.map(o => `<tr><td>${o.matricula}</td><td>${o.nome || ""}</td><td>${o.n}</td></tr>`).join("");
+    document.getElementById("summary").innerHTML = `
+      <div class="cards">
+        <div class="card"><b>${data.total_students}</b><span>alunos na turma</span></div>
+        <div class="card"><b>${data.started}</b><span>iniciaram</span></div>
+        <div class="card"><b>${data.submitted}</b><span>enviaram</span></div>
+        <div class="card"><b>${data.focus_losses}</b><span>trocas de aba (total)</span></div>
+      </div>
+      <h3>Alunos com mais trocas de aba</h3>
+      <table>
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Trocas</th></tr></thead>
+        <tbody>${rows || "<tr><td colspan=3>Nenhum evento registrado.</td></tr>"}</tbody>
+      </table>
+    `;
+  } catch (e) {
+    err.textContent = e.message || "Token inválido ou erro ao carregar.";
+    document.getElementById("summary").innerHTML = "";
+  }
+});
+</script>
+</body>
+</html>
