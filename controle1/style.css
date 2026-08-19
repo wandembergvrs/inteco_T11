@@ -174,3 +174,32 @@ footer.note {
   max-width: 880px; margin: 0 auto 40px; padding: 0 16px;
   color: var(--muted); font-size: 0.78rem; text-align: center;
 }
+
+/* ---------- Word cloud (Q1) ---------- */
+.wordcloud {
+  position: relative; height: 130px; margin-bottom: 14px;
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden;
+}
+.wordcloud span {
+  position: absolute; font-weight: 700; white-space: nowrap;
+  user-select: none;
+}
+
+/* ---------- Timer badge ---------- */
+#timer-badge { font-variant-numeric: tabular-nums; font-weight: 700; }
+#timer-badge.warn { background: #fffbeb; color: #b45309; }
+#timer-badge.danger { background: #fef2f2; color: var(--bad); }
+
+/* ---------- Lockout overlay ---------- */
+#lockout-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.lockout-box {
+  background: white; border-radius: 14px; padding: 28px; max-width: 420px;
+  text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+.lockout-box h2 { margin: 0 0 10px; color: var(--bad); font-size: 1.15rem; }
+.lockout-box p { margin: 0; color: var(--text); font-size: 0.92rem; }

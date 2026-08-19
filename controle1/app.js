@@ -2,15 +2,30 @@
 // CONFIG
 // ============================================================
 const API_BASE = "https://inteco-t13.duckdns.org";
+const HEARTBEAT_MS = 8000;
 
 // ============================================================
 // STATE
 // ============================================================
-let SESSION = null; // { session_id, matricula, nome, curso }
+let SESSION = null; // { session_id, matricula, nome, curso, tab_token }
 let SUBMITTED = false;
-let SAVE_QUEUE = new Map(); // qid -> value pending save
+let LOCKED_OUT = false;
+let SAVE_QUEUE = new Map();
 let SAVE_TIMER = null;
 let FOCUS_LOSSES = 0;
+let TAB_HIDDEN_PENDING = false;
+let REMAINING_SECONDS = null;
+let TIMER_INTERVAL = null;
+let HEARTBEAT_INTERVAL = null;
+
+function getTabToken() {
+  let t = sessionStorage.getItem("inteco_tab_token");
+  if (!t) {
+    t = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()) + Date.now());
+    sessionStorage.setItem("inteco_tab_token", t);
+  }
+  return t;
+}
 
 // ============================================================
 // LOGIN
@@ -22,6 +37,7 @@ const submittedBanner = document.getElementById("submitted-banner");
 const loginError = document.getElementById("login-error");
 const btnLogin = document.getElementById("btn-login");
 const inMatricula = document.getElementById("in-matricula");
+const lockoutOverlay = document.getElementById("lockout-overlay");
 
 function showLoginError(msg) {
   loginError.textContent = msg;
@@ -42,19 +58,20 @@ async function doLogin() {
     const res = await fetch(`${API_BASE}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matricula }),
+      body: JSON.stringify({ matricula, tab_token: getTabToken() }),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.detail || "Erro ao entrar.");
+      throw new Error((data.detail && data.detail.message) || data.detail || "Erro ao entrar.");
     }
     SESSION = {
       session_id: data.session_id,
       matricula: matricula.replace(/\D/g, ""),
       nome: data.nome,
       curso: data.curso,
+      tab_token: data.tab_token,
     };
-    localStorage.setItem("inteco_matricula", SESSION.matricula);
+    REMAINING_SECONDS = data.remaining_seconds;
     startExam(data.answers || {});
   } catch (err) {
     showLoginError(err.message || "Não foi possível entrar. Tente novamente.");
@@ -81,16 +98,50 @@ function startExam(savedAnswers) {
   document.getElementById("who-curso").textContent =
     `${SESSION.curso || ""} · matrícula ${SESSION.matricula}`;
 
+  buildWordCloud();
   buildQ1();
-  buildCanvasTool("q6-canvas-holder", "q6_canvas");
-  buildCanvasTool("q7-canvas-holder", "q7_canvas");
-  buildCanvasTool("q9-canvas-holder", "q9_canvas");
+
+  mountStaticChart("q2-chart-holder", chartQ2());
+  mountStaticChart("q4a-chart-holder", chartQ4a());
+  mountStaticChart("q4c-chart-holder", chartQ4c());
+  mountStaticChart("q5-chart-holder", chartQ5());
+  mountStaticChart("q8-chart-holder", chartQ8(), { h: 320 });
+
+  buildCanvasTool("q6-canvas-holder", "q6_canvas", chartQ6());
+  buildCanvasTool("q7-canvas-holder", "q7_canvas", null);
+  buildCanvasTool("q9-canvas-holder", "q9_canvas", chartQ9());
 
   wireInputs();
   applySavedAnswers(savedAnswers);
   startFocusTracking();
+  startTimer();
+  startHeartbeat();
 
-  document.getElementById("submit-btn").addEventListener("click", onSubmitClick);
+  document.getElementById("submit-btn").addEventListener("click", () => onSubmitClick(true));
+}
+
+// ============================================================
+// WORD CLOUD (Q1 decorative + word bank)
+// ============================================================
+const Q1_CLOUD_WORDS = [
+  { w: "trade-offs", size: 1.75, color: "warn", top: "10%", left: "6%", rot: -3 },
+  { w: "abre mão", size: 1.15, color: "acc", top: "62%", left: "20%", rot: 2 },
+  { w: "margem", size: 1.3, color: "good", top: "8%", left: "26%", rot: -1 },
+  { w: "incentivos", size: 1.4, color: "acc", top: "40%", left: "44%", rot: 3 },
+  { w: "comércio", size: 1.25, color: "bad", top: "8%", left: "44%", rot: -2 },
+  { w: "mercados", size: 1.15, color: "muted", top: "64%", left: "58%", rot: 1 },
+  { w: "governo", size: 1.15, color: "good", top: "10%", left: "68%", rot: -2 },
+  { w: "produtividade", size: 1.25, color: "warn", top: "58%", left: "76%", rot: 2 },
+  { w: "moeda", size: 1.1, color: "bad", top: "12%", left: "84%", rot: -3 },
+  { w: "inflação", size: 1.15, color: "acc", top: "70%", left: "88%", rot: 1 },
+  { w: "desemprego", size: 1.05, color: "muted", top: "40%", left: "2%", rot: 2 },
+];
+
+function buildWordCloud() {
+  const holder = document.getElementById("q1-wordcloud");
+  holder.innerHTML = Q1_CLOUD_WORDS.map(
+    (item) => `<span style="font-size:${item.size}rem;color:var(--${item.color});top:${item.top};left:${item.left};transform:rotate(${item.rot}deg)">${item.w}</span>`
+  ).join("");
 }
 
 // ============================================================
@@ -151,9 +202,7 @@ function buildQ1() {
 }
 
 function checkQ1Duplicates() {
-  const selects = Array.from(
-    document.querySelectorAll("select[data-q1group]")
-  );
+  const selects = Array.from(document.querySelectorAll("select[data-q1group]"));
   const counts = {};
   selects.forEach((s) => {
     if (s.value) counts[s.value] = (counts[s.value] || 0) + 1;
@@ -164,9 +213,9 @@ function checkQ1Duplicates() {
 }
 
 // ============================================================
-// CANVAS DRAW TOOL (Q6, Q7, Q9)
+// CANVAS DRAW TOOL (Q6, Q7, Q9) - optional reference chart background
 // ============================================================
-function buildCanvasTool(holderId, qid) {
+function buildCanvasTool(holderId, qid, backgroundCfg) {
   const holder = document.getElementById(holderId);
   holder.innerHTML = `
     <div class="canvas-tool">
@@ -174,7 +223,7 @@ function buildCanvasTool(holderId, qid) {
       <div class="canvas-toolbar">
         <button type="button" data-tool="pen" class="active">Caneta</button>
         <button type="button" data-tool="eraser">Borracha</button>
-        <button type="button" data-tool="clear">Limpar</button>
+        <button type="button" data-tool="clear">Limpar desenho</button>
       </div>
     </div>
   `;
@@ -185,26 +234,24 @@ function buildCanvasTool(holderId, qid) {
   let drawing = false;
   let last = null;
 
-  function drawAxes() {
-    ctx.save();
-    ctx.strokeStyle = "#cbd5e1";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(40, 20);
-    ctx.lineTo(40, 320);
-    ctx.lineTo(770, 320);
-    ctx.stroke();
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "12px sans-serif";
-    ctx.fillText("Q", 775, 324);
-    ctx.fillText("P", 30, 15);
-    ctx.restore();
-  }
-
   function resetCanvas() {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawAxes();
+    if (backgroundCfg) {
+      renderChart(ctx, backgroundCfg, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(40, 20);
+      ctx.lineTo(40, 320);
+      ctx.lineTo(770, 320);
+      ctx.stroke();
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "12px sans-serif";
+      ctx.fillText("Q", 775, 324);
+      ctx.fillText("P", 30, 15);
+    }
   }
   resetCanvas();
 
@@ -261,6 +308,7 @@ function buildCanvasTool(holderId, qid) {
     });
   });
 
+  canvas._resetCanvas = resetCanvas;
   canvas._restoreFromDataUrl = (dataUrl) => {
     if (!dataUrl) return;
     const img = new Image();
@@ -282,7 +330,7 @@ function wireInputs() {
     el.addEventListener(evt, () => {
       queueSave(el.dataset.qid, el.value);
     });
-    el.addEventListener("paste", (e) => {
+    el.addEventListener("paste", () => {
       logEvent("paste_attempt", `qid=${el.dataset.qid}`);
     });
   });
@@ -291,8 +339,7 @@ function wireInputs() {
 function applySavedAnswers(saved) {
   Object.entries(saved).forEach(([qid, value]) => {
     const el = document.querySelector(`[data-qid="${qid}"]`);
-    if (!el) return;
-    if (el.tagName === "CANVAS") return;
+    if (!el || el.tagName === "CANVAS") return;
     el.value = value;
   });
   document.querySelectorAll("canvas[data-canvas-for]").forEach((canvas) => {
@@ -304,6 +351,17 @@ function applySavedAnswers(saved) {
   checkQ1Duplicates();
 }
 
+function clearAllInputsLocally() {
+  document.querySelectorAll("[data-qid]").forEach((el) => {
+    if (el.tagName === "CANVAS") return;
+    el.value = "";
+  });
+  document.querySelectorAll("canvas[data-canvas-for]").forEach((canvas) => {
+    if (canvas._resetCanvas) canvas._resetCanvas();
+  });
+  checkQ1Duplicates();
+}
+
 // ============================================================
 // AUTOSAVE (debounced queue -> POST /api/answer)
 // ============================================================
@@ -311,7 +369,7 @@ const saveDot = document.getElementById("save-dot");
 const saveBadge = document.getElementById("save-badge");
 
 function queueSave(qid, value) {
-  if (SUBMITTED) return;
+  if (SUBMITTED || LOCKED_OUT) return;
   SAVE_QUEUE.set(qid, value);
   saveDot.classList.add("pending");
   saveBadge.lastChild.textContent = "Salvando...";
@@ -320,24 +378,30 @@ function queueSave(qid, value) {
 }
 
 async function flushSaveQueue() {
-  if (SAVE_QUEUE.size === 0 || !SESSION) return;
+  if (SAVE_QUEUE.size === 0 || !SESSION || LOCKED_OUT) return;
   const entries = Array.from(SAVE_QUEUE.entries());
   SAVE_QUEUE.clear();
 
   for (const [qid, value] of entries) {
     try {
-      await fetch(`${API_BASE}/api/answer`, {
+      const res = await fetch(`${API_BASE}/api/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: SESSION.session_id,
           matricula: SESSION.matricula,
+          tab_token: SESSION.tab_token,
           question_id: qid,
           value: value,
         }),
       });
+      if (res.status === 409) {
+        const data = await res.json();
+        handleSessionConflict(data);
+        return;
+      }
     } catch (err) {
-      // will retry on next change; queue silently
+      // best-effort; will retry on next change
     }
   }
   saveDot.classList.remove("pending");
@@ -345,7 +409,97 @@ async function flushSaveQueue() {
 }
 
 // ============================================================
-// FOCUS / TAB-SWITCH TRACKING
+// TIMER (1h50 = 110 min), server-authoritative via heartbeat
+// ============================================================
+const timerBadge = document.getElementById("timer-badge");
+
+function formatTime(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function renderTimer() {
+  timerBadge.textContent = formatTime(REMAINING_SECONDS);
+  timerBadge.classList.toggle("warn", REMAINING_SECONDS <= 600 && REMAINING_SECONDS > 120);
+  timerBadge.classList.toggle("danger", REMAINING_SECONDS <= 120);
+}
+
+function startTimer() {
+  renderTimer();
+  TIMER_INTERVAL = setInterval(() => {
+    if (SUBMITTED || LOCKED_OUT) return;
+    REMAINING_SECONDS = Math.max(0, REMAINING_SECONDS - 1);
+    renderTimer();
+    if (REMAINING_SECONDS <= 0) {
+      onSubmitClick(false, "Tempo esgotado (1h50min). Sua avaliação foi enviada automaticamente.");
+    }
+  }, 1000);
+}
+
+// ============================================================
+// HEARTBEAT (keeps single-active-tab enforcement + resyncs timer)
+// ============================================================
+function startHeartbeat() {
+  HEARTBEAT_INTERVAL = setInterval(async () => {
+    if (SUBMITTED || LOCKED_OUT || !SESSION) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: SESSION.session_id,
+          matricula: SESSION.matricula,
+          tab_token: SESSION.tab_token,
+        }),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        handleSessionConflict(data);
+        return;
+      }
+      const data = await res.json();
+      if (typeof data.remaining_seconds === "number") {
+        REMAINING_SECONDS = data.remaining_seconds;
+        renderTimer();
+      }
+    } catch (err) {
+      // network hiccup - ignore, will retry next tick
+    }
+  }, HEARTBEAT_MS);
+}
+
+function handleSessionConflict(data) {
+  const code = data && data.detail && data.detail.code;
+  const message = (data && data.detail && data.detail.message) || "Sessão encerrada.";
+  if (code === "superseded") {
+    lockOut(
+      "Sessão encerrada",
+      "Esta avaliação foi aberta em outra aba, janela ou dispositivo. Esta aba foi desconectada e não pode mais editar respostas."
+    );
+  } else {
+    // expired or already submitted
+    SUBMITTED = true;
+    lockForm();
+    submittedBanner.classList.remove("hidden");
+    submittedBanner.textContent = message;
+  }
+}
+
+function lockOut(title, msg) {
+  LOCKED_OUT = true;
+  clearInterval(TIMER_INTERVAL);
+  clearInterval(HEARTBEAT_INTERVAL);
+  document.getElementById("lockout-title").textContent = title;
+  document.getElementById("lockout-msg").textContent = msg;
+  lockoutOverlay.classList.remove("hidden");
+  lockForm();
+}
+
+// ============================================================
+// FOCUS / TAB-SWITCH TRACKING -> alert + reset answers
 // ============================================================
 const focusBadge = document.getElementById("focus-badge");
 
@@ -373,22 +527,56 @@ async function logEvent(type, detail) {
   }
 }
 
+async function resetAnswersAfterViolation() {
+  if (SUBMITTED || LOCKED_OUT || !SESSION) return;
+  clearAllInputsLocally();
+  SAVE_QUEUE.clear();
+  try {
+    const res = await fetch(`${API_BASE}/api/reset_answers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: SESSION.session_id,
+        matricula: SESSION.matricula,
+        tab_token: SESSION.tab_token,
+      }),
+    });
+    if (res.status === 409) {
+      const data = await res.json();
+      handleSessionConflict(data);
+    }
+  } catch (err) {
+    // best-effort
+  }
+}
+
 function startFocusTracking() {
   document.addEventListener("visibilitychange", () => {
+    if (SUBMITTED || LOCKED_OUT) return;
     if (document.hidden) {
       FOCUS_LOSSES += 1;
       updateFocusBadge();
+      TAB_HIDDEN_PENDING = true;
       logEvent("tab_hidden");
-    } else {
-      logEvent("tab_visible");
+    } else if (TAB_HIDDEN_PENDING) {
+      TAB_HIDDEN_PENDING = false;
+      logEvent("tab_visible_reset");
+      alert(
+        "Você trocou de aba/janela durante a avaliação. Por segurança, todas as respostas preenchidas foram apagadas e você precisa preenchê-las novamente. O tempo continua correndo."
+      );
+      resetAnswersAfterViolation();
     }
   });
 
-  window.addEventListener("blur", () => logEvent("window_blur"));
-  window.addEventListener("focus", () => logEvent("window_focus"));
+  window.addEventListener("blur", () => {
+    if (!SUBMITTED && !LOCKED_OUT) logEvent("window_blur");
+  });
+  window.addEventListener("focus", () => {
+    if (!SUBMITTED && !LOCKED_OUT) logEvent("window_focus");
+  });
 
   window.addEventListener("beforeunload", (e) => {
-    if (!SUBMITTED) {
+    if (!SUBMITTED && !LOCKED_OUT && SESSION) {
       logEvent("page_unload_before_submit");
       e.preventDefault();
       e.returnValue = "";
@@ -399,15 +587,19 @@ function startFocusTracking() {
 // ============================================================
 // SUBMIT
 // ============================================================
-async function onSubmitClick() {
-  if (SUBMITTED) return;
-  const ok = confirm(
-    "Tem certeza que deseja enviar a avaliação? Depois de enviada, não será possível editar as respostas."
-  );
-  if (!ok) return;
+async function onSubmitClick(needsConfirm, autoMessage) {
+  if (SUBMITTED || LOCKED_OUT) return;
+
+  if (needsConfirm) {
+    const ok = confirm(
+      "Tem certeza que deseja enviar a avaliação? Depois de enviada, não será possível editar as respostas."
+    );
+    if (!ok) return;
+  }
 
   if (SAVE_TIMER) clearTimeout(SAVE_TIMER);
   await flushSaveQueue();
+  if (SUBMITTED || LOCKED_OUT) return;
 
   const btn = document.getElementById("submit-btn");
   btn.disabled = true;
@@ -420,18 +612,27 @@ async function onSubmitClick() {
       body: JSON.stringify({
         session_id: SESSION.session_id,
         matricula: SESSION.matricula,
+        tab_token: SESSION.tab_token,
       }),
     });
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.detail || "Erro ao enviar.");
+      const code = data.detail && data.detail.code;
+      if (code === "superseded") {
+        handleSessionConflict(data);
+        return;
+      }
+      // expired/already_submitted -> treat as success (already locked server-side)
     }
     SUBMITTED = true;
+    clearInterval(TIMER_INTERVAL);
+    clearInterval(HEARTBEAT_INTERVAL);
     lockForm();
     submittedBanner.classList.remove("hidden");
+    submittedBanner.textContent = autoMessage || "Avaliação enviada com sucesso. Você já pode fechar esta página.";
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
-    alert(err.message || "Não foi possível enviar. Tente novamente.");
+    alert("Não foi possível enviar. Verifique sua conexão e tente novamente.");
     btn.disabled = false;
     btn.textContent = "Enviar avaliação";
   }
