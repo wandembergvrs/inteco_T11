@@ -40,8 +40,14 @@ function renderChart(ctx, cfg, w, h) {
 
   ctx.fillStyle = CHART_COLORS.muted;
   ctx.font = "12px sans-serif";
-  ctx.fillText(cfg.xlabel || "", w - CHART_MARGIN.right - 14, m.y(cfg.ymin) + 20);
-  ctx.fillText(cfg.ylabel || "", m.x(cfg.xmin) - 10, CHART_MARGIN.top + 4);
+  ctx.textAlign = "right";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(cfg.xlabel || "", w - CHART_MARGIN.right, m.y(cfg.ymin) + 20);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "bottom";
+  ctx.fillText(cfg.ylabel || "", 2, CHART_MARGIN.top - 4);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
 
   // guide (dotted) lines
   (cfg.guides || []).forEach((g) => {

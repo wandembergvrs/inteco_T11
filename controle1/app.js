@@ -98,26 +98,37 @@ function startExam(savedAnswers) {
   document.getElementById("who-curso").textContent =
     `${SESSION.curso || ""} · matrícula ${SESSION.matricula}`;
 
-  buildWordCloud();
-  buildQ1();
+  safe("buildWordCloud", buildWordCloud);
+  safe("buildQ1", buildQ1);
 
-  mountStaticChart("q2-chart-holder", chartQ2());
-  mountStaticChart("q4a-chart-holder", chartQ4a());
-  mountStaticChart("q4c-chart-holder", chartQ4c());
-  mountStaticChart("q5-chart-holder", chartQ5());
-  mountStaticChart("q8-chart-holder", chartQ8(), { h: 320 });
+  safe("chartQ2", () => mountStaticChart("q2-chart-holder", chartQ2()));
+  safe("chartQ4a", () => mountStaticChart("q4a-chart-holder", chartQ4a()));
+  safe("chartQ4c", () => mountStaticChart("q4c-chart-holder", chartQ4c()));
+  safe("chartQ5", () => mountStaticChart("q5-chart-holder", chartQ5()));
+  safe("chartQ8", () => mountStaticChart("q8-chart-holder", chartQ8(), { h: 320 }));
 
-  buildCanvasTool("q6-canvas-holder", "q6_canvas", chartQ6());
-  buildCanvasTool("q7-canvas-holder", "q7_canvas", null);
-  buildCanvasTool("q9-canvas-holder", "q9_canvas", chartQ9());
+  safe("canvasQ6", () => buildCanvasTool("q6-canvas-holder", "q6_canvas", chartQ6()));
+  safe("canvasQ7", () => buildCanvasTool("q7-canvas-holder", "q7_canvas", null));
+  safe("canvasQ9", () => buildCanvasTool("q9-canvas-holder", "q9_canvas", chartQ9()));
 
-  wireInputs();
-  applySavedAnswers(savedAnswers);
-  startFocusTracking();
-  startTimer();
-  startHeartbeat();
+  safe("wireInputs", wireInputs);
+  safe("applySavedAnswers", () => applySavedAnswers(savedAnswers));
+  safe("startFocusTracking", startFocusTracking);
+  safe("startTimer", startTimer);
+  safe("startHeartbeat", startHeartbeat);
 
   document.getElementById("submit-btn").addEventListener("click", () => onSubmitClick(true));
+}
+
+// Runs one init step in isolation: a failure here (e.g. a stale cached
+// asset mismatched with a fresh one) must not take the rest of the exam down.
+function safe(label, fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.error(`[inteco] falha ao iniciar "${label}":`, e);
+    logEvent("init_error", `${label}: ${e && e.message}`);
+  }
 }
 
 // ============================================================
@@ -550,30 +561,40 @@ async function resetAnswersAfterViolation() {
   }
 }
 
+// A "violation" is any loss of OS-level focus or tab visibility: switching
+// tabs, alt-tabbing to another app, or clicking into a window on a second
+// monitor all count. visibilitychange and blur/focus often fire together for
+// the same episode, so TAB_HIDDEN_PENDING dedupes them into a single
+// alert+reset per episode instead of double-firing.
+function markFocusLost(eventType) {
+  if (SUBMITTED || LOCKED_OUT) return;
+  if (!TAB_HIDDEN_PENDING) {
+    FOCUS_LOSSES += 1;
+    updateFocusBadge();
+    logEvent(eventType);
+  }
+  TAB_HIDDEN_PENDING = true;
+}
+
+function markFocusRegained(eventType) {
+  if (SUBMITTED || LOCKED_OUT) return;
+  if (!TAB_HIDDEN_PENDING) return;
+  TAB_HIDDEN_PENDING = false;
+  logEvent(eventType);
+  alert(
+    "Você trocou de aba/janela/monitor durante a avaliação. Por segurança, todas as respostas preenchidas foram apagadas e você precisa preenchê-las novamente. O tempo continua correndo."
+  );
+  resetAnswersAfterViolation();
+}
+
 function startFocusTracking() {
   document.addEventListener("visibilitychange", () => {
-    if (SUBMITTED || LOCKED_OUT) return;
-    if (document.hidden) {
-      FOCUS_LOSSES += 1;
-      updateFocusBadge();
-      TAB_HIDDEN_PENDING = true;
-      logEvent("tab_hidden");
-    } else if (TAB_HIDDEN_PENDING) {
-      TAB_HIDDEN_PENDING = false;
-      logEvent("tab_visible_reset");
-      alert(
-        "Você trocou de aba/janela durante a avaliação. Por segurança, todas as respostas preenchidas foram apagadas e você precisa preenchê-las novamente. O tempo continua correndo."
-      );
-      resetAnswersAfterViolation();
-    }
+    if (document.hidden) markFocusLost("tab_hidden");
+    else markFocusRegained("tab_visible_reset");
   });
 
-  window.addEventListener("blur", () => {
-    if (!SUBMITTED && !LOCKED_OUT) logEvent("window_blur");
-  });
-  window.addEventListener("focus", () => {
-    if (!SUBMITTED && !LOCKED_OUT) logEvent("window_focus");
-  });
+  window.addEventListener("blur", () => markFocusLost("window_blur"));
+  window.addEventListener("focus", () => markFocusRegained("window_focus_reset"));
 
   window.addEventListener("beforeunload", (e) => {
     if (!SUBMITTED && !LOCKED_OUT && SESSION) {
@@ -582,6 +603,38 @@ function startFocusTracking() {
       e.returnValue = "";
     }
   });
+
+  startScreenshotDeterrents();
+}
+
+// ============================================================
+// SCREENSHOT / DEVTOOLS DETERRENTS
+//
+// IMPORTANT LIMITATION: a webpage cannot actually block the OS-level
+// Print Screen capture (Windows/macOS/Linux all intercept it before the
+// browser sees it in most configurations) or any external camera/phone
+// photo of the screen. What follows is best-effort logging for the cases
+// the browser *can* see, plus friction (disabling right-click, text
+// selection, and common devtools shortcuts) - a deterrent, not a real block.
+// ============================================================
+function startScreenshotDeterrents() {
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "PrintScreen") logEvent("printscreen_key");
+  });
+  document.addEventListener("keydown", (e) => {
+    const k = e.key;
+    const blocked =
+      k === "PrintScreen" ||
+      (e.ctrlKey && e.shiftKey && (k === "I" || k === "J" || k === "C")) ||
+      (e.metaKey && e.shiftKey && (k === "3" || k === "4" || k === "5")) ||
+      k === "F12";
+    if (blocked) {
+      logEvent("blocked_shortcut", k);
+      e.preventDefault();
+    }
+  });
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.body.style.userSelect = "none";
 }
 
 // ============================================================
