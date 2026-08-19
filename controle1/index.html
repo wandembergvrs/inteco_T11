@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>1º Controle de Aprendizagem - INTECO T13</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -45,6 +45,14 @@
   <div class="lockout-box">
     <h2 id="lockout-title">Sessão encerrada</h2>
     <p id="lockout-msg">Esta avaliação foi aberta em outra aba, janela ou dispositivo. Esta aba foi desconectada e não pode mais editar respostas.</p>
+  </div>
+</div>
+
+<div id="violation-overlay" class="hidden">
+  <div class="lockout-box warn">
+    <h2>Troca de aba/janela detectada</h2>
+    <p>Você saiu desta página durante a avaliação. Por segurança, todas as respostas preenchidas (inclusive desenhos) foram apagadas e você precisará preenchê-las novamente. O cronômetro não parou.</p>
+    <button id="violation-ack-btn">Entendi, continuar a prova</button>
   </div>
 </div>
 
@@ -284,7 +292,7 @@
   <footer class="note">Todas as respostas são salvas automaticamente. Ao terminar, clique em "Enviar avaliação" no topo da página.</footer>
 </div>
 
-<script src="charts.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="charts.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

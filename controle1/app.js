@@ -565,9 +565,19 @@ async function resetAnswersAfterViolation() {
 // tabs, alt-tabbing to another app, or clicking into a window on a second
 // monitor all count. visibilitychange and blur/focus often fire together for
 // the same episode, so TAB_HIDDEN_PENDING dedupes them into a single
-// alert+reset per episode instead of double-firing.
+// notice+reset per episode instead of double-firing.
+//
+// We deliberately do NOT use window.alert()/confirm() here: native dialogs
+// themselves trigger window blur (when they open) and focus (when
+// dismissed), which used to re-enter this same handler and open another
+// dialog forever. VIOLATION_MODAL_OPEN suppresses focus tracking while our
+// own in-page modal is up, and the modal itself is a plain DOM element so
+// interacting with it never fires window blur/focus in the first place.
+let VIOLATION_MODAL_OPEN = false;
+const violationOverlay = document.getElementById("violation-overlay");
+
 function markFocusLost(eventType) {
-  if (SUBMITTED || LOCKED_OUT) return;
+  if (SUBMITTED || LOCKED_OUT || VIOLATION_MODAL_OPEN) return;
   if (!TAB_HIDDEN_PENDING) {
     FOCUS_LOSSES += 1;
     updateFocusBadge();
@@ -577,17 +587,27 @@ function markFocusLost(eventType) {
 }
 
 function markFocusRegained(eventType) {
-  if (SUBMITTED || LOCKED_OUT) return;
+  if (SUBMITTED || LOCKED_OUT || VIOLATION_MODAL_OPEN) return;
   if (!TAB_HIDDEN_PENDING) return;
   TAB_HIDDEN_PENDING = false;
   logEvent(eventType);
-  alert(
-    "Você trocou de aba/janela/monitor durante a avaliação. Por segurança, todas as respostas preenchidas foram apagadas e você precisa preenchê-las novamente. O tempo continua correndo."
-  );
-  resetAnswersAfterViolation();
+  showViolationModal();
+}
+
+function showViolationModal() {
+  VIOLATION_MODAL_OPEN = true;
+  violationOverlay.classList.remove("hidden");
 }
 
 function startFocusTracking() {
+  document.getElementById("violation-ack-btn").addEventListener("click", () => {
+    violationOverlay.classList.add("hidden");
+    resetAnswersAfterViolation();
+    // small delay before re-arming: avoids a stray blur/focus right at the
+    // moment the modal closes being misread as a new violation
+    setTimeout(() => { VIOLATION_MODAL_OPEN = false; }, 300);
+  });
+
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) markFocusLost("tab_hidden");
     else markFocusRegained("tab_visible_reset");
