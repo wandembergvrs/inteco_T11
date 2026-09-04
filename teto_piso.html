@@ -13,7 +13,9 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-rows:auto 1fr}
-    header{padding:16px 20px;border-bottom:1px solid #0b1020}
+    header{padding:16px 20px;border-bottom:1px solid #1e293b}
+    .backlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#cfe3ff;background:linear-gradient(180deg,#0b1220,#0e1a2e);border:1px solid #1f2b40;padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;margin-bottom:10px;transition:border-color .2s ease, transform .2s ease}
+    .backlink:hover{border-color:#334155;transform:translateY(-1px)}
     header h1{margin:0;font-size:20px}
     header .sub{color:var(--muted);font-size:12px}
     main{display:grid;grid-template-columns:380px 1fr;gap:16px;padding:16px}
@@ -40,6 +42,7 @@
 </head>
 <body>
   <header>
+    <a class="backlink" href="/inteco_T11/index.html">← Índice</a>
     <h1>Preço Regulamentado — Teto/Piso</h1>
     <div class="sub">Varie um <strong>preço máximo (teto)</strong> ou <strong>preço mínimo (piso)</strong> e observe <strong>escassez</strong> (Qd &gt; Qs) ou <strong>excesso</strong> (Qs &gt; Qd) em relação ao equilíbrio.</div>
   </header>

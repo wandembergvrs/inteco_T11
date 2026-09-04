@@ -16,6 +16,8 @@
     display:grid;grid-template-rows:auto auto auto 1fr
   }
   header{padding:10px 12px;border-bottom:1px solid var(--line)}
+  .backlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#cfe3ff;background:linear-gradient(180deg,#0b1220,#0e1a2e);border:1px solid #1f2b40;padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;margin-bottom:8px;transition:border-color .2s ease, transform .2s ease}
+  .backlink:hover{border-color:#334155;transform:translateY(-1px)}
   header h1{margin:0;font-size:16px}
 
   /* ALERTA */
@@ -70,7 +72,7 @@
 </style>
 </head>
 <body>
-  <header><h1>Elasticidade — Ponto Médio & Pontual</h1></header>
+  <header><a class="backlink" href="/inteco_T11/index.html">← Índice</a><h1>Elasticidade — Ponto Médio & Pontual</h1></header>
 
   <!-- ALERTA -->
   <div id="alert" class="alert" role="status" aria-live="polite">

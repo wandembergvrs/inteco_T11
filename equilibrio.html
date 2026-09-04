@@ -16,9 +16,11 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-rows:auto 1fr}
-    header{padding:16px 20px;border-bottom:1px solid #0b1020}
+    header{padding:16px 20px;border-bottom:1px solid #1e293b}
     header h1{margin:0;font-size:20px}
     header .sub{color:var(--muted);font-size:12px}
+    .backlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#cfe3ff;background:linear-gradient(180deg,#0b1220,#0e1a2e);border:1px solid #1f2b40;padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;margin-bottom:10px;transition:border-color .2s ease, transform .2s ease}
+    .backlink:hover{border-color:#334155;transform:translateY(-1px)}
     main{display:grid;grid-template-columns:400px 1fr;gap:16px;padding:16px}
     .panel{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
     .row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center}
@@ -42,6 +44,7 @@
 </head>
 <body>
   <header>
+    <a class="backlink" href="/inteco_T11/index.html">← Índice</a>
     <h1>Equilíbrio — CS (consumidor) e PS (produtor) separados</h1>
     <div class="sub">Curvas fixas que se cruzam em E*. Escolha Q e veja CS (azul) e PS (verde) claramente identificados no plano e nas barras. P* fixo.</div>
   </header>
