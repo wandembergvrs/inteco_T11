@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enquete ao vivo — INTECO</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--text:#e5e7eb;--line:#1f2937;
+      --accent:#60a5fa;--accent2:#22c55e;--warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    header{padding:16px 20px;border-bottom:1px solid #1e293b}
+    .backlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#cfe3ff;background:linear-gradient(180deg,#0b1220,#0e1a2e);border:1px solid #1f2b40;padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;margin-bottom:10px}
+    header h1{margin:0;font-size:20px}
+    header .sub{color:var(--muted);font-size:12px}
+    main{display:flex;justify-content:center;padding:20px}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:520px;width:100%}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--text);font-size:18px;text-align:center;letter-spacing:.15em}
+    button{cursor:pointer;font-weight:700;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0f172a,#0b1220);color:var(--text);padding:12px 16px;font-size:15px}
+    button:hover{border-color:#334155}
+    button.opcao{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px}
+    button.opcao.selecionada{border-color:var(--accent);background:#0e1a2e}
+    button.opcao:disabled{opacity:.6;cursor:default}
+    .btn-primary{background:linear-gradient(180deg,#1d4ed8,#1e40af);border-color:#1e3a8a;width:100%;margin-top:14px}
+    .pergunta{font-size:18px;font-weight:800;margin-bottom:14px;line-height:1.35}
+    .status{color:var(--muted);font-size:13px;text-align:center;padding:30px 0}
+    .scale-row{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+    .scale-row button{flex:1;font-size:18px;padding:16px 0}
+    .scale-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+    .enviado{text-align:center;color:var(--accent2);font-weight:700;padding:30px 0}
+    .hidden{display:none}
+    .aviso{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  </style>
+</head>
+<body>
+  <header>
+    <a class="backlink" href="/inteco_T11/index.html">← Índice</a>
+    <h1>Enquete ao vivo</h1>
+    <div class="sub">Responda no seu celular — os resultados aparecem na tela do professor em tempo real.</div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div id="avisoConfig" class="aviso hidden">
+        ⚠️ Firebase ainda não configurado (arquivo <code>js/firebase-config.js</code>). A enquete não vai funcionar até isso ser preenchido.
+      </div>
+
+      <div id="telaEntrar">
+        <label for="codigo">Código da sessão (peça ao professor)</label>
+        <input type="text" id="codigo" maxlength="6" placeholder="Ex: 1234" autocomplete="off" />
+        <button class="btn-primary" id="btnEntrar">Entrar</button>
+      </div>
+
+      <div id="telaPergunta" class="hidden">
+        <div class="pergunta" id="textoPergunta"></div>
+        <div id="areaResposta"></div>
+      </div>
+
+      <div id="telaEnviado" class="hidden enviado">✓ Resposta enviada! Aguarde a próxima pergunta…</div>
+      <div id="telaAguardando" class="hidden status">Aguardando o professor iniciar a próxima pergunta…</div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/perguntas.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+
+    if (!FIREBASE_CONFIGURADO) {
+      $('avisoConfig').classList.remove('hidden');
+    } else {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = FIREBASE_CONFIGURADO ? firebase.database() : null;
+
+    // ID único do aluno neste navegador (persiste entre recarregamentos)
+    let voterId = localStorage.getItem('inteco_voter_id');
+    if (!voterId) {
+      voterId = 'v_' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('inteco_voter_id', voterId);
+    }
+
+    let codigoSessao = null;
+    let perguntaAtualId = null;
+    let respostaEnviadaPara = null;
+
+    function mostraTela(nome) {
+      ['telaEntrar','telaPergunta','telaEnviado','telaAguardando'].forEach(id => {
+        $(id).classList.toggle('hidden', id !== nome);
+      });
+    }
+
+    $('btnEntrar').addEventListener('click', () => {
+      const cod = $('codigo').value.trim();
+      if (!cod) return;
+      codigoSessao = cod;
+      escutarSessao();
+    });
+
+    function escutarSessao() {
+      if (!db) return;
+      db.ref(`sessions/${codigoSessao}/current`).on('value', (snap) => {
+        const id = snap.val();
+        perguntaAtualId = id;
+        if (!id) { mostraTela('telaAguardando'); return; }
+
+        // já votou nesta pergunta?
+        db.ref(`sessions/${codigoSessao}/votes/${id}/${voterId}`).get().then((voteSnap) => {
+          if (voteSnap.exists()) {
+            mostraTela('telaEnviado');
+          } else {
+            renderPergunta(id);
+          }
+        });
+      });
+    }
+
+    function renderPergunta(id) {
+      const pergunta = PERGUNTAS.find(p => p.id === id);
+      if (!pergunta) { mostraTela('telaAguardando'); return; }
+
+      $('textoPergunta').textContent = pergunta.texto;
+      const area = $('areaResposta');
+      area.innerHTML = '';
+
+      if (pergunta.tipo === 'mc') {
+        pergunta.opcoes.forEach((opcaoTexto, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'opcao';
+          btn.textContent = opcaoTexto;
+          btn.addEventListener('click', () => enviarVoto(id, idx));
+          area.appendChild(btn);
+        });
+      } else if (pergunta.tipo === 'scale') {
+        const row = document.createElement('div');
+        row.className = 'scale-row';
+        for (let v = 1; v <= 5; v++) {
+          const btn = document.createElement('button');
+          btn.textContent = v;
+          btn.addEventListener('click', () => enviarVoto(id, v));
+          row.appendChild(btn);
+        }
+        area.appendChild(row);
+        const labels = document.createElement('div');
+        labels.className = 'scale-labels';
+        labels.innerHTML = `<span>${pergunta.minLabel || ''}</span><span>${pergunta.maxLabel || ''}</span>`;
+        area.appendChild(labels);
+      }
+
+      mostraTela('telaPergunta');
+    }
+
+    function enviarVoto(id, valor) {
+      if (!db || respostaEnviadaPara === id) return;
+      respostaEnviadaPara = id;
+      db.ref(`sessions/${codigoSessao}/votes/${id}/${voterId}`).set(valor)
+        .then(() => mostraTela('telaEnviado'))
+        .catch(() => { respostaEnviadaPara = null; alert('Erro ao enviar resposta, tente de novo.'); });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apresentador — Enquete ao vivo INTECO</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--text:#e5e7eb;--line:#1f2937;
+      --accent:#60a5fa;--accent2:#22c55e;--warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);min-height:100vh}
+    header{padding:14px 20px;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .backlink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#cfe3ff;background:linear-gradient(180deg,#0b1220,#0e1a2e);border:1px solid #1f2b40;padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px}
+    .codigo-box{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px}
+    .codigo-box .valor{font-size:24px;font-weight:900;letter-spacing:.15em;color:var(--accent)}
+    .codigo-box input{width:80px;background:transparent;border:none;color:var(--text);font-size:18px;text-align:center}
+    button{cursor:pointer;font-weight:700;border-radius:10px;border:1px solid var(--line);background:linear-gradient(180deg,#0f172a,#0b1220);color:var(--text);padding:8px 14px;font-size:13px}
+    button:hover{border-color:#334155}
+    main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px}
+    @media(max-width:900px){main{grid-template-columns:1fr}}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .lista-perguntas{max-height:80vh;overflow-y:auto}
+    .item-pergunta{border-bottom:1px solid var(--line);padding:10px 4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .item-pergunta .txt{font-size:12px;color:var(--muted);flex:1}
+    .item-pergunta.ativa .txt{color:var(--accent);font-weight:700}
+    .palco .pergunta{font-size:26px;font-weight:900;margin-bottom:24px;line-height:1.3}
+    .barra-linha{margin-bottom:16px}
+    .barra-label{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+    .barra-fundo{background:#0b1425;border:1px solid var(--line);border-radius:8px;height:28px;overflow:hidden}
+    .barra-fill{height:100%;background:linear-gradient(90deg,#1d4ed8,#60a5fa);display:flex;align-items:center;padding-left:8px;font-size:12px;font-weight:700;color:#0b1220;transition:width .4s ease}
+    .barra-fill.certa{background:linear-gradient(90deg,#15803d,#22c55e)}
+    .total-votos{color:var(--muted);font-size:13px;margin-top:6px}
+    .media{font-size:15px;color:var(--accent2);font-weight:700;margin-top:10px}
+    .vazio{color:var(--muted);text-align:center;padding:60px 0;font-size:15px}
+    .aviso{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  </style>
+</head>
+<body>
+  <header>
+    <a class="backlink" href="/inteco_T11/index.html">← Índice</a>
+    <div class="codigo-box">
+      <span style="font-size:12px;color:var(--muted)">Código:</span>
+      <input type="text" id="codigo" maxlength="6" placeholder="1234" />
+      <button id="btnGerar">Gerar código</button>
+      <span style="font-size:12px;color:var(--muted)">alunos entram em /inteco_T11/enquete.html</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div id="avisoConfig" class="aviso hidden">⚠️ Firebase não configurado ainda (js/firebase-config.js).</div>
+      <h3 style="margin-top:0">Perguntas</h3>
+      <div class="lista-perguntas" id="listaPerguntas"></div>
+    </section>
+
+    <section class="panel palco">
+      <div id="semPergunta" class="vazio">Selecione uma pergunta na lista ao lado para projetar.</div>
+      <div id="areaPalco" class="hidden">
+        <div class="pergunta" id="textoPalco"></div>
+        <div id="resultados"></div>
+        <div class="total-votos" id="totalVotos"></div>
+        <button id="btnZerar" style="margin-top:16px">Zerar respostas desta pergunta</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/perguntas.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+
+    if (!FIREBASE_CONFIGURADO) $('avisoConfig').classList.remove('hidden');
+    else firebase.initializeApp(firebaseConfig);
+    const db = FIREBASE_CONFIGURADO ? firebase.database() : null;
+
+    let codigoSessao = localStorage.getItem('inteco_codigo_professor') || '';
+    $('codigo').value = codigoSessao;
+
+    $('btnGerar').addEventListener('click', () => {
+      codigoSessao = String(Math.floor(1000 + Math.random() * 9000));
+      $('codigo').value = codigoSessao;
+      salvarCodigo();
+    });
+    $('codigo').addEventListener('change', salvarCodigo);
+
+    function salvarCodigo() {
+      codigoSessao = $('codigo').value.trim();
+      localStorage.setItem('inteco_codigo_professor', codigoSessao);
+      escutarAtual();
+    }
+
+    function montarLista() {
+      const lista = $('listaPerguntas');
+      lista.innerHTML = '';
+      PERGUNTAS.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'item-pergunta';
+        div.id = 'item-' + p.id;
+        div.innerHTML = `<span class="txt">[${p.tipo === 'mc' ? 'MC' : 'Escala'}] ${p.texto}</span>`;
+        const btn = document.createElement('button');
+        btn.textContent = 'Ativar';
+        btn.addEventListener('click', () => ativarPergunta(p.id));
+        div.appendChild(btn);
+        lista.appendChild(div);
+      });
+    }
+
+    function ativarPergunta(id) {
+      if (!db || !codigoSessao) { alert('Defina um código de sessão primeiro.'); return; }
+      db.ref(`sessions/${codigoSessao}/current`).set(id);
+    }
+
+    let perguntaAtivaId = null;
+    let unsubVotos = null;
+
+    function escutarAtual() {
+      if (!db || !codigoSessao) return;
+      db.ref(`sessions/${codigoSessao}/current`).on('value', (snap) => {
+        perguntaAtivaId = snap.val();
+        document.querySelectorAll('.item-pergunta').forEach(el => el.classList.remove('ativa'));
+        if (perguntaAtivaId) {
+          const el = $('item-' + perguntaAtivaId);
+          if (el) el.classList.add('ativa');
+          renderPalco(perguntaAtivaId);
+        } else {
+          $('semPergunta').classList.remove('hidden');
+          $('areaPalco').classList.add('hidden');
+        }
+      });
+    }
+
+    function renderPalco(id) {
+      const pergunta = PERGUNTAS.find(p => p.id === id);
+      if (!pergunta) return;
+      $('semPergunta').classList.add('hidden');
+      $('areaPalco').classList.remove('hidden');
+      $('textoPalco').textContent = pergunta.texto;
+
+      if (unsubVotos) unsubVotos.off();
+      const ref = db.ref(`sessions/${codigoSessao}/votes/${id}`);
+      unsubVotos = ref;
+      ref.on('value', (snap) => renderResultados(pergunta, snap.val() || {}));
+
+      $('btnZerar').onclick = () => {
+        if (confirm('Zerar todas as respostas desta pergunta?')) ref.remove();
+      };
+    }
+
+    function renderResultados(pergunta, votos) {
+      const valores = Object.values(votos);
+      const total = valores.length;
+      $('totalVotos').textContent = `${total} resposta(s)`;
+      const div = $('resultados');
+      div.innerHTML = '';
+
+      if (pergunta.tipo === 'mc') {
+        const contagem = pergunta.opcoes.map(() => 0);
+        valores.forEach(v => { if (contagem[v] !== undefined) contagem[v]++; });
+        pergunta.opcoes.forEach((texto, idx) => {
+          const pct = total ? Math.round((contagem[idx] / total) * 100) : 0;
+          const linha = document.createElement('div');
+          linha.className = 'barra-linha';
+          linha.innerHTML = `
+            <div class="barra-label"><span>${texto}${idx === pergunta.certa ? ' ✓' : ''}</span><span>${contagem[idx]} (${pct}%)</span></div>
+            <div class="barra-fundo"><div class="barra-fill${idx === pergunta.certa ? ' certa' : ''}" style="width:${pct}%"></div></div>`;
+          div.appendChild(linha);
+        });
+      } else if (pergunta.tipo === 'scale') {
+        const contagem = [0, 0, 0, 0, 0, 0];
+        let soma = 0;
+        valores.forEach(v => { if (v >= 1 && v <= 5) { contagem[v]++; soma += v; } });
+        for (let v = 1; v <= 5; v++) {
+          const pct = total ? Math.round((contagem[v] / total) * 100) : 0;
+          const linha = document.createElement('div');
+          linha.className = 'barra-linha';
+          linha.innerHTML = `
+            <div class="barra-label"><span>${v}</span><span>${contagem[v]} (${pct}%)</span></div>
+            <div class="barra-fundo"><div class="barra-fill" style="width:${pct}%"></div></div>`;
+          div.appendChild(linha);
+        }
+        const media = document.createElement('div');
+        media.className = 'media';
+        media.textContent = total ? `Média: ${(soma / total).toFixed(2)}` : 'Média: —';
+        div.appendChild(media);
+      }
+    }
+
+    montarLista();
+    if (codigoSessao) escutarAtual();
+  </script>
+</body>
+</html>
