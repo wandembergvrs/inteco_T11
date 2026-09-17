@@ -13,13 +13,15 @@
 // 6. Salve este arquivo e suba (commit/push) — pronto, a enquete passa a funcionar.
 
 const firebaseConfig = {
-  apiKey: "SUBSTITUA_AQUI",
-  authDomain: "SUBSTITUA_AQUI.firebaseapp.com",
-  databaseURL: "https://SUBSTITUA_AQUI-default-rtdb.firebaseio.com",
-  projectId: "SUBSTITUA_AQUI",
-  storageBucket: "SUBSTITUA_AQUI.appspot.com",
-  messagingSenderId: "SUBSTITUA_AQUI",
-  appId: "SUBSTITUA_AQUI"
+  apiKey: "AIzaSyDXhBxC-KDpMxxDrXGAo-IyyA8ggXrof0w",
+  authDomain: "inteco-5fa6d.firebaseapp.com",
+  // ATENÇÃO: databaseURL abaixo é um palpite (região us-central1). Confirme no console:
+  // Compilação > Realtime Database > a URL aparece no topo da página. Se for diferente, troque aqui.
+  databaseURL: "https://inteco-5fa6d-default-rtdb.firebaseio.com",
+  projectId: "inteco-5fa6d",
+  storageBucket: "inteco-5fa6d.firebasestorage.app",
+  messagingSenderId: "632586373458",
+  appId: "1:632586373458:web:9274da81f217a8e182d28b"
 };
 
 const FIREBASE_CONFIGURADO = !Object.values(firebaseConfig).some(v => String(v).includes("SUBSTITUA_AQUI"));
