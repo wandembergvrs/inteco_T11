@@ -39,10 +39,28 @@
     .aviso-ok{background:#0b2f1f;border:1px solid #14532d;color:#86efac;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:700;margin-top:10px}
     .resposta-texto{background:#0b1425;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:14px}
     .aviso{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+    .hidden{display:none}
+    #gateSenha{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+    #gateSenha .caixa{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;max-width:360px;width:100%;text-align:center}
+    #gateSenha h2{margin:0 0 6px;font-size:18px}
+    #gateSenha p{color:var(--muted);font-size:13px;margin:0 0 16px}
+    #gateSenha input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--text);font-size:16px;text-align:center;letter-spacing:.1em;box-sizing:border-box}
+    #gateSenha button{width:100%;margin-top:12px;background:linear-gradient(180deg,#1d4ed8,#1e40af);border-color:#1e3a8a}
+    #gateErro{color:#fca5a5;font-size:12px;margin-top:10px;min-height:14px}
   </style>
 </head>
 <body>
-  <header>
+  <div id="gateSenha">
+    <div class="caixa">
+      <h2>🔒 Painel do professor</h2>
+      <p>Digite a senha para acessar os controles da enquete.</p>
+      <input type="password" id="inputSenha" placeholder="Senha" autocomplete="off" />
+      <button id="btnEntrarSenha">Entrar</button>
+      <div id="gateErro"></div>
+    </div>
+  </div>
+
+  <header class="hidden" id="headerPainel">
     <a class="backlink" href="/inteco_T11/index.html">← Índice</a>
     <div class="codigo-box">
       <span style="font-size:12px;color:var(--muted)">Código:</span>
@@ -52,7 +70,7 @@
     </div>
   </header>
 
-  <main>
+  <main class="hidden" id="mainPainel">
     <section class="panel">
       <div id="avisoConfig" class="aviso hidden">⚠️ Firebase não configurado ainda (js/firebase-config.js).</div>
       <h3 style="margin-top:0">Perguntas</h3>
@@ -260,6 +278,43 @@
 
     montarLista();
     if (codigoSessao) escutarAtual();
+
+    // ---- Senha simples (so evita acesso casual/por engano; nao e seguranca real,
+    // ja que roda no navegador e o codigo fonte e publico) ----
+    const SENHA_HASH = "a223217b4d0ca0e1dd13200418a350f86939d093a31567251a5d5eae7da44f8c";
+
+    async function sha256Hex(texto) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function liberarPainel() {
+      $('gateSenha').classList.add('hidden');
+      $('headerPainel').classList.remove('hidden');
+      $('mainPainel').classList.remove('hidden');
+    }
+
+    async function tentarEntrar() {
+      const val = $('inputSenha').value;
+      const hash = await sha256Hex(val);
+      if (hash === SENHA_HASH) {
+        localStorage.setItem('inteco_apresentador_auth', '1');
+        liberarPainel();
+      } else {
+        $('gateErro').textContent = 'Senha incorreta.';
+        $('inputSenha').value = '';
+        $('inputSenha').focus();
+      }
+    }
+
+    $('btnEntrarSenha').addEventListener('click', tentarEntrar);
+    $('inputSenha').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarEntrar(); });
+
+    if (localStorage.getItem('inteco_apresentador_auth') === '1') {
+      liberarPainel();
+    } else {
+      $('inputSenha').focus();
+    }
   </script>
 </body>
 </html>
