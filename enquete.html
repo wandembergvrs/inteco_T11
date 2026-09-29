@@ -33,6 +33,18 @@
     .enviado{text-align:center;color:var(--accent2);font-weight:700;padding:30px 0}
     .hidden{display:none}
     .aviso{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+    .barra-linha{margin-bottom:14px}
+    .barra-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+    .barra-fundo{background:#0b1425;border:1px solid var(--line);border-radius:8px;height:24px;overflow:hidden}
+    .barra-fill{height:100%;background:linear-gradient(90deg,#1d4ed8,#60a5fa);transition:width .4s ease}
+    .barra-fill.certa{background:linear-gradient(90deg,#15803d,#22c55e)}
+    .total-votos{color:var(--muted);font-size:12px;margin-top:4px;text-align:center}
+    .media{font-size:14px;color:var(--accent2);font-weight:700;margin-top:10px;text-align:center}
+    .resultado-titulo{font-size:16px;font-weight:800;margin-bottom:14px;line-height:1.3}
+    input[type=number],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--text);font-size:16px}
+    textarea{min-height:90px;font-family:inherit;resize:vertical}
+    .unidade-label{font-size:12px;color:var(--muted);margin-top:6px}
+    .resposta-texto{background:#0b1425;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:14px;text-align:left}
   </style>
 </head>
 <body>
@@ -59,15 +71,21 @@
         <div id="areaResposta"></div>
       </div>
 
-      <div id="telaEnviado" class="hidden enviado">✓ Resposta enviada! Aguarde a próxima pergunta…</div>
+      <div id="telaEnviado" class="hidden enviado">✓ Resposta enviada! Aguarde o professor publicar o resultado…</div>
       <div id="telaAguardando" class="hidden status">Aguardando o professor iniciar a próxima pergunta…</div>
+
+      <div id="telaResultado" class="hidden">
+        <div class="resultado-titulo" id="resultadoTexto"></div>
+        <div id="resultadoBarras"></div>
+        <div class="total-votos" id="resultadoTotal"></div>
+      </div>
     </section>
   </main>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/perguntas.js"></script>
+  <script src="js/firebase-config.js?v=2"></script>
+  <script src="js/perguntas.js?v=2"></script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -90,7 +108,7 @@
     let respostaEnviadaPara = null;
 
     function mostraTela(nome) {
-      ['telaEntrar','telaPergunta','telaEnviado','telaAguardando'].forEach(id => {
+      ['telaEntrar','telaPergunta','telaEnviado','telaAguardando','telaResultado'].forEach(id => {
         $(id).classList.toggle('hidden', id !== nome);
       });
     }
@@ -102,22 +120,122 @@
       escutarSessao();
     });
 
+    let revealedRefAtual = null;
+    let revealedCbAtual = null;
+    let votosRefAtual = null;
+
+    function pararDeEscutarRevelado() {
+      if (revealedRefAtual && revealedCbAtual) revealedRefAtual.off('value', revealedCbAtual);
+      revealedRefAtual = null;
+      revealedCbAtual = null;
+    }
+    function pararDeEscutarVotos() {
+      if (votosRefAtual) votosRefAtual.off();
+      votosRefAtual = null;
+    }
+
     function escutarSessao() {
       if (!db) return;
       db.ref(`sessions/${codigoSessao}/current`).on('value', (snap) => {
         const id = snap.val();
         perguntaAtualId = id;
+        pararDeEscutarRevelado();
+        pararDeEscutarVotos();
         if (!id) { mostraTela('telaAguardando'); return; }
 
-        // já votou nesta pergunta?
-        db.ref(`sessions/${codigoSessao}/votes/${id}/${voterId}`).get().then((voteSnap) => {
-          if (voteSnap.exists()) {
-            mostraTela('telaEnviado');
+        revealedRefAtual = db.ref(`sessions/${codigoSessao}/revealed/${id}`);
+        revealedCbAtual = (revSnap) => {
+          if (revSnap.val() === true) {
+            mostrarResultado(id);
           } else {
-            renderPergunta(id);
+            pararDeEscutarVotos();
+            // já votou nesta pergunta?
+            db.ref(`sessions/${codigoSessao}/votes/${id}/${voterId}`).get().then((voteSnap) => {
+              if (voteSnap.exists()) {
+                mostraTela('telaEnviado');
+              } else {
+                renderPergunta(id);
+              }
+            });
           }
-        });
+        };
+        revealedRefAtual.on('value', revealedCbAtual);
       });
+    }
+
+    function mostrarResultado(id) {
+      const pergunta = PERGUNTAS.find(p => p.id === id);
+      if (!pergunta) return;
+      pararDeEscutarVotos();
+      votosRefAtual = db.ref(`sessions/${codigoSessao}/votes/${id}`);
+      votosRefAtual.on('value', (snap) => renderResultadoAluno(pergunta, snap.val() || {}));
+      mostraTela('telaResultado');
+    }
+
+    function renderResultadoAluno(pergunta, votos) {
+      const valores = Object.values(votos);
+      const total = valores.length;
+      $('resultadoTexto').textContent = pergunta.texto;
+      $('resultadoTotal').textContent = `${total} resposta(s)`;
+      const div = $('resultadoBarras');
+      div.innerHTML = '';
+
+      if (pergunta.tipo === 'mc') {
+        const contagem = pergunta.opcoes.map(() => 0);
+        valores.forEach(v => { if (contagem[v] !== undefined) contagem[v]++; });
+        pergunta.opcoes.forEach((texto, idx) => {
+          const pct = total ? Math.round((contagem[idx] / total) * 100) : 0;
+          const linha = document.createElement('div');
+          linha.className = 'barra-linha';
+          linha.innerHTML = `
+            <div class="barra-label"><span>${texto}${idx === pergunta.certa ? ' ✓' : ''}</span><span>${contagem[idx]} (${pct}%)</span></div>
+            <div class="barra-fundo"><div class="barra-fill${idx === pergunta.certa ? ' certa' : ''}" style="width:${pct}%"></div></div>`;
+          div.appendChild(linha);
+        });
+      } else if (pergunta.tipo === 'scale') {
+        const contagem = [0, 0, 0, 0, 0, 0];
+        let soma = 0;
+        valores.forEach(v => { if (v >= 1 && v <= 5) { contagem[v]++; soma += v; } });
+        for (let v = 1; v <= 5; v++) {
+          const pct = total ? Math.round((contagem[v] / total) * 100) : 0;
+          const linha = document.createElement('div');
+          linha.className = 'barra-linha';
+          linha.innerHTML = `
+            <div class="barra-label"><span>${v}</span><span>${contagem[v]} (${pct}%)</span></div>
+            <div class="barra-fundo"><div class="barra-fill" style="width:${pct}%"></div></div>`;
+          div.appendChild(linha);
+        }
+        const media = document.createElement('div');
+        media.className = 'media';
+        media.textContent = total ? `Média: ${(soma / total).toFixed(2)}` : 'Média: —';
+        div.appendChild(media);
+      } else if (pergunta.tipo === 'numero') {
+        const numeros = valores.map(Number).filter(v => !isNaN(v));
+        const soma = numeros.reduce((a, b) => a + b, 0);
+        const media = numeros.length ? soma / numeros.length : 0;
+        const somaEl = document.createElement('div');
+        somaEl.className = 'media';
+        somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        div.appendChild(somaEl);
+        if (pergunta.sustentavel != null && numeros.length) {
+          const aviso = document.createElement('div');
+          aviso.style.marginTop = '10px';
+          aviso.style.fontWeight = '700';
+          aviso.style.fontSize = '14px';
+          aviso.style.color = soma > pergunta.sustentavel ? '#fde68a' : '#86efac';
+          aviso.textContent = soma > pergunta.sustentavel
+            ? `⚠️ A soma ultrapassou o limite sustentável de ${pergunta.sustentavel}${pergunta.unidade ? ' ' + pergunta.unidade : ''}!`
+            : `✓ A soma ficou dentro do limite sustentável de ${pergunta.sustentavel}${pergunta.unidade ? ' ' + pergunta.unidade : ''}.`;
+          div.appendChild(aviso);
+        }
+      } else if (pergunta.tipo === 'texto') {
+        valores.forEach((texto) => {
+          const linha = document.createElement('div');
+          linha.className = 'resposta-texto';
+          linha.textContent = String(texto);
+          div.appendChild(linha);
+        });
+      }
     }
 
     function renderPergunta(id) {
@@ -150,6 +268,41 @@
         labels.className = 'scale-labels';
         labels.innerHTML = `<span>${pergunta.minLabel || ''}</span><span>${pergunta.maxLabel || ''}</span>`;
         area.appendChild(labels);
+      } else if (pergunta.tipo === 'numero') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = pergunta.min ?? 0;
+        if (pergunta.max != null) input.max = pergunta.max;
+        input.placeholder = 'Digite um número...';
+        area.appendChild(input);
+        if (pergunta.unidade) {
+          const un = document.createElement('div');
+          un.className = 'unidade-label';
+          un.textContent = pergunta.unidade;
+          area.appendChild(un);
+        }
+        const btn = document.createElement('button');
+        btn.className = 'btn-primary';
+        btn.textContent = 'Enviar';
+        btn.addEventListener('click', () => {
+          const v = Number(input.value);
+          if (input.value === '' || isNaN(v)) { alert('Digite um número válido.'); return; }
+          enviarVoto(id, v);
+        });
+        area.appendChild(btn);
+      } else if (pergunta.tipo === 'texto') {
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = 'Escreva sua resposta...';
+        area.appendChild(textarea);
+        const btn = document.createElement('button');
+        btn.className = 'btn-primary';
+        btn.textContent = 'Enviar';
+        btn.addEventListener('click', () => {
+          const v = textarea.value.trim();
+          if (!v) { alert('Escreva algo antes de enviar.'); return; }
+          enviarVoto(id, v);
+        });
+        area.appendChild(btn);
       }
 
       mostraTela('telaPergunta');

@@ -34,6 +34,10 @@
     .total-votos{color:var(--muted);font-size:13px;margin-top:6px}
     .media{font-size:15px;color:var(--accent2);font-weight:700;margin-top:10px}
     .vazio{color:var(--muted);text-align:center;padding:60px 0;font-size:15px}
+    #btnPublicar.publicado{background:linear-gradient(180deg,#15803d,#166534);border-color:#166534;color:#ecfdf5}
+    .aviso-tragedia{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:700;margin-top:10px}
+    .aviso-ok{background:#0b2f1f;border:1px solid #14532d;color:#86efac;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:700;margin-top:10px}
+    .resposta-texto{background:#0b1425;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:14px}
     .aviso{background:#3f2d0b;border:1px solid #78350f;color:#fde68a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
   </style>
 </head>
@@ -61,15 +65,18 @@
         <div class="pergunta" id="textoPalco"></div>
         <div id="resultados"></div>
         <div class="total-votos" id="totalVotos"></div>
-        <button id="btnZerar" style="margin-top:16px">Zerar respostas desta pergunta</button>
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+          <button id="btnPublicar"></button>
+          <button id="btnZerar">Zerar respostas desta pergunta</button>
+        </div>
       </div>
     </section>
   </main>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/perguntas.js"></script>
+  <script src="js/firebase-config.js?v=2"></script>
+  <script src="js/perguntas.js?v=2"></script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -100,7 +107,8 @@
         const div = document.createElement('div');
         div.className = 'item-pergunta';
         div.id = 'item-' + p.id;
-        div.innerHTML = `<span class="txt">[${p.tipo === 'mc' ? 'MC' : 'Escala'}] ${p.texto}</span>`;
+        const rotulos = { mc: 'MC', scale: 'Escala', numero: 'Número', texto: 'Aberta' };
+        div.innerHTML = `<span class="txt">[${rotulos[p.tipo] || p.tipo}] ${p.texto}</span>`;
         const btn = document.createElement('button');
         btn.textContent = 'Ativar';
         btn.addEventListener('click', () => ativarPergunta(p.id));
@@ -112,10 +120,13 @@
     function ativarPergunta(id) {
       if (!db || !codigoSessao) { alert('Defina um código de sessão primeiro.'); return; }
       db.ref(`sessions/${codigoSessao}/current`).set(id);
+      db.ref(`sessions/${codigoSessao}/revealed/${id}`).set(false);
     }
 
     let perguntaAtivaId = null;
     let unsubVotos = null;
+    let unsubRevealed = null;
+    let revelacaoAtual = false;
 
     function escutarAtual() {
       if (!db || !codigoSessao) return;
@@ -144,6 +155,17 @@
       const ref = db.ref(`sessions/${codigoSessao}/votes/${id}`);
       unsubVotos = ref;
       ref.on('value', (snap) => renderResultados(pergunta, snap.val() || {}));
+
+      if (unsubRevealed) unsubRevealed.off();
+      const revRef = db.ref(`sessions/${codigoSessao}/revealed/${id}`);
+      unsubRevealed = revRef;
+      revRef.on('value', (snap) => {
+        revelacaoAtual = snap.val() === true;
+        $('btnPublicar').textContent = revelacaoAtual ? '✓ Publicado — ocultar dos alunos' : 'Publicar resultado para os alunos';
+        $('btnPublicar').classList.toggle('publicado', revelacaoAtual);
+      });
+
+      $('btnPublicar').onclick = () => revRef.set(!revelacaoAtual);
 
       $('btnZerar').onclick = () => {
         if (confirm('Zerar todas as respostas desta pergunta?')) ref.remove();
@@ -186,6 +208,45 @@
         media.className = 'media';
         media.textContent = total ? `Média: ${(soma / total).toFixed(2)}` : 'Média: —';
         div.appendChild(media);
+      } else if (pergunta.tipo === 'numero') {
+        const numeros = valores.map(Number).filter(v => !isNaN(v));
+        const soma = numeros.reduce((a, b) => a + b, 0);
+        const media = numeros.length ? soma / numeros.length : 0;
+        const lista = document.createElement('div');
+        lista.style.fontSize = '14px';
+        lista.style.color = 'var(--muted)';
+        lista.textContent = numeros.length ? `Valores: ${numeros.join(', ')}` : 'Nenhuma resposta ainda.';
+        div.appendChild(lista);
+
+        const somaEl = document.createElement('div');
+        somaEl.className = 'media';
+        somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        div.appendChild(somaEl);
+
+        if (pergunta.sustentavel != null && numeros.length) {
+          const aviso = document.createElement('div');
+          if (soma > pergunta.sustentavel) {
+            aviso.className = 'aviso-tragedia';
+            aviso.textContent = `⚠️ Soma (${soma}) ULTRAPASSA o limite sustentável de ${pergunta.sustentavel}${pergunta.unidade ? ' ' + pergunta.unidade : ''}! Isso é a tragédia dos comuns acontecendo agora.`;
+          } else {
+            aviso.className = 'aviso-ok';
+            aviso.textContent = `✓ Soma (${soma}) está dentro do limite sustentável de ${pergunta.sustentavel}${pergunta.unidade ? ' ' + pergunta.unidade : ''}.`;
+          }
+          div.appendChild(aviso);
+        }
+      } else if (pergunta.tipo === 'texto') {
+        if (!valores.length) {
+          const vazio = document.createElement('div');
+          vazio.style.color = 'var(--muted)';
+          vazio.textContent = 'Nenhuma resposta ainda.';
+          div.appendChild(vazio);
+        }
+        valores.forEach((texto) => {
+          const linha = document.createElement('div');
+          linha.className = 'resposta-texto';
+          linha.textContent = String(texto);
+          div.appendChild(linha);
+        });
       }
     }
 
