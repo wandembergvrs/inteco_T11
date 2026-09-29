@@ -68,6 +68,7 @@
 
       <div id="telaPergunta" class="hidden">
         <div class="pergunta" id="textoPergunta"></div>
+        <div id="graficoPergunta" style="margin-bottom:14px"></div>
         <div id="areaResposta"></div>
       </div>
 
@@ -85,6 +86,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
+  <script src="js/mini-charts.js?v=1"></script>
   <script src="js/perguntas.js?v=2"></script>
   <script>
     const $ = id => document.getElementById(id);
@@ -243,6 +245,13 @@
       if (!pergunta) { mostraTela('telaAguardando'); return; }
 
       $('textoPergunta').textContent = pergunta.texto;
+      const graficoDiv = $('graficoPergunta');
+      graficoDiv.innerHTML = '';
+      if (pergunta.grafico) {
+        graficoDiv.innerHTML = '<div id="graficoPerguntaCanvas"></div>';
+        try { mountStaticChart('graficoPerguntaCanvas', pergunta.grafico, { w: 400, h: 220 }); }
+        catch (e) { console.error('[enquete] erro no grafico:', e); }
+      }
       const area = $('areaResposta');
       area.innerHTML = '';
 
