@@ -289,21 +289,25 @@
     }
 
     function liberarPainel() {
-      $('gateSenha').classList.add('hidden');
-      $('headerPainel').classList.remove('hidden');
-      $('mainPainel').classList.remove('hidden');
+      $('gateSenha').style.display = 'none';
+      $('headerPainel').style.display = '';
+      $('mainPainel').style.display = '';
     }
 
     async function tentarEntrar() {
-      const val = $('inputSenha').value;
-      const hash = await sha256Hex(val);
-      if (hash === SENHA_HASH) {
-        localStorage.setItem('inteco_apresentador_auth', '1');
-        liberarPainel();
-      } else {
-        $('gateErro').textContent = 'Senha incorreta.';
-        $('inputSenha').value = '';
-        $('inputSenha').focus();
+      try {
+        const val = $('inputSenha').value.trim();
+        const hash = await sha256Hex(val);
+        if (hash === SENHA_HASH) {
+          localStorage.setItem('inteco_apresentador_auth', '1');
+          liberarPainel();
+        } else {
+          $('gateErro').textContent = 'Senha incorreta.';
+          $('inputSenha').value = '';
+          $('inputSenha').focus();
+        }
+      } catch (e) {
+        $('gateErro').textContent = 'Erro ao verificar senha: ' + e.message;
       }
     }
 
