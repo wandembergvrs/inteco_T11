@@ -80,6 +80,12 @@
         <div id="resultadoBarras"></div>
         <div class="total-votos" id="resultadoTotal"></div>
       </div>
+
+      <div id="telaReflexao" class="hidden">
+        <div class="pergunta" id="textoReflexao"></div>
+        <div id="graficoReflexao" style="margin-bottom:14px"></div>
+        <div class="status" style="padding:14px 0">💭 Pense na resposta... o professor vai liberar o envio em breve.</div>
+      </div>
     </section>
   </main>
 
@@ -110,7 +116,7 @@
     let respostaEnviadaPara = null;
 
     function mostraTela(nome) {
-      ['telaEntrar','telaPergunta','telaEnviado','telaAguardando','telaResultado'].forEach(id => {
+      ['telaEntrar','telaPergunta','telaEnviado','telaAguardando','telaResultado','telaReflexao'].forEach(id => {
         $(id).classList.toggle('hidden', id !== nome);
       });
     }
@@ -124,12 +130,19 @@
 
     let revealedRefAtual = null;
     let revealedCbAtual = null;
+    let abertoRefAtual = null;
+    let abertoCbAtual = null;
     let votosRefAtual = null;
 
-    function pararDeEscutarRevelado() {
+    let estadoRevelado = false;
+    let estadoAberto = false;
+    let estadoVotado = false;
+
+    function pararDeEscutarExtras() {
       if (revealedRefAtual && revealedCbAtual) revealedRefAtual.off('value', revealedCbAtual);
-      revealedRefAtual = null;
-      revealedCbAtual = null;
+      if (abertoRefAtual && abertoCbAtual) abertoRefAtual.off('value', abertoCbAtual);
+      revealedRefAtual = null; revealedCbAtual = null;
+      abertoRefAtual = null; abertoCbAtual = null;
     }
     function pararDeEscutarVotos() {
       if (votosRefAtual) votosRefAtual.off();
@@ -141,28 +154,50 @@
       db.ref(`sessions/${codigoSessao}/current`).on('value', (snap) => {
         const id = snap.val();
         perguntaAtualId = id;
-        pararDeEscutarRevelado();
+        pararDeEscutarExtras();
         pararDeEscutarVotos();
+        estadoRevelado = false; estadoAberto = false; estadoVotado = false;
         if (!id) { mostraTela('telaAguardando'); return; }
 
+        const atualizarTela = () => {
+          if (estadoRevelado) { mostrarResultado(id); return; }
+          if (!estadoAberto) { mostrarReflexao(id); return; }
+          if (estadoVotado) { mostraTela('telaEnviado'); return; }
+          renderPergunta(id);
+        };
+
         revealedRefAtual = db.ref(`sessions/${codigoSessao}/revealed/${id}`);
-        revealedCbAtual = (revSnap) => {
-          if (revSnap.val() === true) {
-            mostrarResultado(id);
-          } else {
-            pararDeEscutarVotos();
-            // já votou nesta pergunta?
+        revealedCbAtual = (s) => { estadoRevelado = s.val() === true; atualizarTela(); };
+        revealedRefAtual.on('value', revealedCbAtual);
+
+        abertoRefAtual = db.ref(`sessions/${codigoSessao}/aberto/${id}`);
+        abertoCbAtual = (s) => {
+          estadoAberto = s.val() === true;
+          if (estadoAberto) {
             db.ref(`sessions/${codigoSessao}/votes/${id}/${voterId}`).get().then((voteSnap) => {
-              if (voteSnap.exists()) {
-                mostraTela('telaEnviado');
-              } else {
-                renderPergunta(id);
-              }
+              estadoVotado = voteSnap.exists();
+              atualizarTela();
             });
+          } else {
+            atualizarTela();
           }
         };
-        revealedRefAtual.on('value', revealedCbAtual);
+        abertoRefAtual.on('value', abertoCbAtual);
       });
+    }
+
+    function mostrarReflexao(id) {
+      const pergunta = PERGUNTAS.find(p => p.id === id);
+      if (!pergunta) { mostraTela('telaAguardando'); return; }
+      $('textoReflexao').textContent = pergunta.texto;
+      const graficoDiv = $('graficoReflexao');
+      graficoDiv.innerHTML = '';
+      if (pergunta.grafico) {
+        graficoDiv.innerHTML = '<div id="graficoReflexaoCanvas"></div>';
+        try { mountStaticChart('graficoReflexaoCanvas', pergunta.grafico, { w: 400, h: 220 }); }
+        catch (e) { console.error('[enquete] erro no grafico:', e); }
+      }
+      mostraTela('telaReflexao');
     }
 
     function mostrarResultado(id) {

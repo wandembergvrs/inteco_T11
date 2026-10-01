@@ -85,6 +85,7 @@
         <div id="resultados"></div>
         <div class="total-votos" id="totalVotos"></div>
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+          <button id="btnAbrirResposta"></button>
           <button id="btnPublicar"></button>
           <button id="btnZerar">Zerar respostas desta pergunta</button>
         </div>
@@ -141,12 +142,15 @@
       if (!db || !codigoSessao) { alert('Defina um código de sessão primeiro.'); return; }
       db.ref(`sessions/${codigoSessao}/current`).set(id);
       db.ref(`sessions/${codigoSessao}/revealed/${id}`).set(false);
+      db.ref(`sessions/${codigoSessao}/aberto/${id}`).set(false);
     }
 
     let perguntaAtivaId = null;
     let unsubVotos = null;
     let unsubRevealed = null;
     let revelacaoAtual = false;
+    let unsubAberto = null;
+    let abertoAtual = false;
 
     function escutarAtual() {
       if (!db || !codigoSessao) return;
@@ -192,6 +196,17 @@
       });
 
       $('btnPublicar').onclick = () => revRef.set(!revelacaoAtual);
+
+      if (unsubAberto) unsubAberto.off();
+      const abertoRef = db.ref(`sessions/${codigoSessao}/aberto/${id}`);
+      unsubAberto = abertoRef;
+      abertoRef.on('value', (snap) => {
+        abertoAtual = snap.val() === true;
+        $('btnAbrirResposta').textContent = abertoAtual ? '✓ Resposta liberada — bloquear' : '🔓 Liberar resposta para os alunos';
+        $('btnAbrirResposta').classList.toggle('publicado', abertoAtual);
+      });
+
+      $('btnAbrirResposta').onclick = () => abertoRef.set(!abertoAtual);
 
       $('btnZerar').onclick = () => {
         if (confirm('Zerar todas as respostas desta pergunta?')) ref.remove();

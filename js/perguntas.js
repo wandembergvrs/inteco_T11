@@ -104,6 +104,32 @@ const PERGUNTAS = [
       points: [{ x: 1, y: 5, label: "Léo", color: "warn" }, { x: 2, y: 15, label: "Mel", color: "warn" }, { x: 3, y: 25, label: "Rui", color: "warn" }],
       hlines: [{ y: 20, color: "good", label: "Preço R$20" }] } },
 
+  // ---- Variação do excedente do consumidor: imposto, preço mínimo e máximo (discreto) ----
+  { id: "q38", tipo: "mc",
+    texto: "Voltando aos 4 compradores do show (Ana R$40, Bia R$30, Caio R$20, Duda R$10): sem intervenção, o preço de equilíbrio é R$15 (vendem para Ana, Bia e Caio — EC = R$45, linha verde tracejada no gráfico). O governo cria um IMPOSTO que eleva o preço pago pelo consumidor para R$25 (linha vermelha). Qual a variação do excedente do consumidor?",
+    opcoes: ["Caiu de R$45 para R$20 (queda de R$25) — Caio deixou de comprar", "Caiu de R$45 para R$30", "Subiu de R$45 para R$60", "Não muda, pois o imposto incide só sobre o vendedor"], certa: 0,
+    grafico: { xmin: 0, xmax: 5, ymin: 0, ymax: 45, xlabel: "Comprador", ylabel: "Disp. a pagar (R$)",
+      points: [{ x: 1, y: 40, label: "Ana", color: "acc" }, { x: 2, y: 30, label: "Bia", color: "acc" }, { x: 3, y: 20, label: "Caio", color: "acc" }, { x: 4, y: 10, label: "Duda", color: "acc" }],
+      hlines: [{ y: 15, color: "good", dashed: true, label: "Sem imposto R$15" }, { y: 25, color: "bad", label: "Com imposto R$25" }] } },
+
+  { id: "q39", tipo: "mc",
+    texto: "Mesmos 4 compradores (Ana R$40, Bia R$30, Caio R$20, Duda R$10) e mesmo preço livre de R$15 (EC = R$45). Dessa vez NÃO é um imposto — é um PREÇO MÍNIMO (piso) de R$25 estabelecido por lei, que empurra o preço de venda diretamente para R$25. O que acontece com o excedente do consumidor, e por quê?",
+    opcoes: ["Cai do mesmo jeito que com o imposto — o piso também afasta quem tem disposição a pagar menor que R$25", "Não muda, pois preços mínimos só afetam vendedores", "Sobe, pois o preço mínimo protege os compradores", "É impossível comparar com o caso do imposto"], certa: 0,
+    grafico: { xmin: 0, xmax: 5, ymin: 0, ymax: 45, xlabel: "Comprador", ylabel: "Disp. a pagar (R$)",
+      points: [{ x: 1, y: 40, label: "Ana", color: "acc" }, { x: 2, y: 30, label: "Bia", color: "acc" }, { x: 3, y: 20, label: "Caio", color: "acc" }, { x: 4, y: 10, label: "Duda", color: "acc" }],
+      hlines: [{ y: 15, color: "good", dashed: true, label: "Sem piso R$15" }, { y: 25, color: "bad", label: "Piso R$25" }] } },
+
+  { id: "q40", tipo: "mc",
+    texto: "Agora o governo fixa um TETO de preço (máximo permitido) em R$10. Olhando os vendedores (Léo custo R$5, Mel R$15, Rui R$25), só o Léo topa produzir a esse preço — apenas 1 unidade é ofertada, mesmo havendo 4 compradores dispostos a pagar mais. Supondo que essa unidade vá para quem mais valoriza (Ana, R$40), o que acontece com o excedente do consumidor em relação à situação livre (R$45, com Ana+Bia+Caio comprando a R$15)?",
+    opcoes: ["Cai para R$30 — a ESCASSEZ gerada pelo teto limitou quantos conseguiram comprar, mesmo com preço mais baixo", "Sobe para R$120, já que todos pagariam menos", "Fica igual, pois o preço caiu na mesma proporção para todos", "Não dá pra saber sem a curva de oferta completa"], certa: 0,
+    grafico: { xmin: 0, xmax: 5, ymin: 0, ymax: 45, xlabel: "Unidade", ylabel: "R$",
+      points: [{ x: 1, y: 40, label: "Ana", color: "acc" }, { x: 2, y: 30, label: "Bia", color: "acc" }, { x: 3, y: 20, label: "Caio", color: "acc" }, { x: 4, y: 10, label: "Duda", color: "acc" },
+                { x: 1, y: 5, label: "Léo", color: "warn" }, { x: 2, y: 15, label: "Mel", color: "warn" }, { x: 3, y: 25, label: "Rui", color: "warn" }],
+      hlines: [{ y: 10, color: "bad", label: "Teto R$10" }] } },
+
+  { id: "q41", tipo: "scale", texto: "Comparando os três casos (imposto, piso e teto de preço): o quanto você concorda que QUALQUER intervenção de preço tende a reduzir o excedente total do mercado em relação ao equilíbrio livre, mesmo quando a intenção é boa?",
+    minLabel: "Discordo totalmente", maxLabel: "Concordo totalmente (correto em geral)" },
+
   // ---- Três bens: complementares e substitutos ----
   { id: "q29", tipo: "mc",
     texto: "Três mercados interligados: carros (bem X), gasolina (complementar de X — usados juntos) e passagem de ônibus (substituto de X — uma alternativa ao carro). Se o preço da gasolina cai bastante, o gráfico mostra o que tende a acontecer com a demanda por carros:",
