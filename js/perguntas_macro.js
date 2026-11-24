@@ -8,9 +8,10 @@
 //   "comentario" explicação mostrada ao publicar o resultado
 //   "tabela"     { cabecalho: [...], linhas: [[...], ...] } mostrada junto da pergunta
 //   "fixa"       true = não embaralhar as alternativas
-const PERGUNTAS = [
+//   "reserva"    true = pergunta guardada, fora da sessão
+const PERGUNTAS_TODAS = [
   // ---- 1. Taxa de câmbio nominal ----
-  { id: "m0", tipo: "numero", secao: "1. Câmbio nominal",
+  { id: "m0", reserva: true, tipo: "numero", secao: "1. Câmbio nominal",
     texto: "💱 Para aquecer, sem pesquisar: quantos reais você acha que custa 1 dólar hoje?",
     unidade: "R$ por US$",
     comentario: "Compare a média da turma com a cotação do dia. Esse preço de uma moeda em termos de outra é a taxa de câmbio NOMINAL." },
@@ -44,7 +45,7 @@ const PERGUNTAS = [
     opcoes: ["Compara o preço de um mesmo produto entre países para avaliar se as moedas estão sub ou sobrevalorizadas segundo a PPC", "Mede a inflação de alimentos nos Estados Unidos", "Calcula o PIB per capita a partir do consumo de fast food", "Define a taxa de câmbio oficial dos países"], certa: 0,
     comentario: "É uma forma simples e didática de aplicar a PPC: um produto padronizado, vendido em quase todos os países." },
 
-  { id: "m6", tipo: "scale", secao: "2. PPC e índice Big Mac",
+  { id: "m6", reserva: true, tipo: "scale", secao: "2. PPC e índice Big Mac",
     texto: "🍔 O quanto você concorda: “a PPC funciona perfeitamente para o hambúrguer, porque ele pode ser comprado num país e revendido no outro”?",
     minLabel: "Discordo totalmente", maxLabel: "Concordo totalmente",
     comentario: "A afirmação é falsa: o hambúrguer não é comercializável entre países e carrega custos locais (aluguel, salário do atendente, impostos). Por isso a PPC falha no curto prazo e vale melhor como tendência de longo prazo." },
@@ -65,7 +66,7 @@ const PERGUNTAS = [
     opcoes: ["De demanda", "De custos (oferta)", "Inercial"], certa: 2,
     comentario: "A indexação perpetua a inflação passada. O Plano Real (com a URV) foi desenhado justamente para quebrar essa inércia." },
 
-  { id: "m10", tipo: "mc", secao: "3. Inflação",
+  { id: "m10", reserva: true, tipo: "mc", secao: "3. Inflação",
     texto: "📈 Para combater uma inflação de DEMANDA, o Banco Central costuma:",
     opcoes: ["Subir a taxa de juros (Selic), encarecendo o crédito e esfriando a demanda", "Baixar a taxa de juros para estimular a produção", "Congelar todos os preços por decreto", "Indexar todos os contratos à inflação passada"], certa: 0,
     comentario: "Juros mais altos encarecem o crédito e reduzem consumo e investimento. Contra a inflação de custos, o mesmo remédio custa mais caro em produção e emprego, porque a origem do problema está na oferta." },
@@ -83,7 +84,7 @@ const PERGUNTAS = [
     unidade: "R$", gabarito: 48,
     comentario: "PIB real usa as quantidades do ano e os preços do ANO-BASE: 12 × 2 + 6 × 4 = 24 + 24 = R$ 48." },
 
-  { id: "m13", tipo: "numero", secao: "4. PIB nominal e real",
+  { id: "m13", reserva: true, tipo: "numero", secao: "4. PIB nominal e real",
     texto: "🧮 O PIB real passou de R$ 40 no Ano 1 para R$ 48 no Ano 2. De quanto foi o crescimento REAL da economia, em %?",
     tabela: { cabecalho: ["", "PIB nominal", "PIB real"], linhas: [["Ano 1 (base)", "R$ 40", "R$ 40"], ["Ano 2", "R$ 66", "R$ 48"]] },
     unidade: "%", gabarito: 20,
@@ -113,7 +114,7 @@ const PERGUNTAS = [
     opcoes: ["Capital físico e capital humano", "Capital humano e capital físico", "Capital físico nas duas", "Recursos naturais e capital humano"], certa: 0,
     comentario: "Capital físico: equipamentos e estruturas usados para produzir. Capital humano: conhecimento e habilidades dos trabalhadores, adquiridos com educação, treinamento e experiência." },
 
-  { id: "m17", tipo: "mc", secao: "6. Capital físico e humano",
+  { id: "m17", reserva: true, tipo: "mc", secao: "6. Capital físico e humano",
     texto: "🛠️ Qual destes itens NÃO é capital físico?",
     opcoes: ["O conhecimento acumulado pelos engenheiros de uma empresa", "Uma rodovia", "Os computadores de um escritório", "O galpão de uma fábrica"], certa: 0,
     comentario: "Conhecimento dos trabalhadores é capital humano. Os dois tipos de capital elevam a produtividade e, portanto, o padrão de vida." },
@@ -134,19 +135,19 @@ const PERGUNTAS = [
     opcoes: ["Friccional", "Estrutural", "Cíclico (conjuntural)", "Sazonal"], certa: 2,
     comentario: "Acompanha o ciclo econômico: some quando a economia volta a crescer." },
 
-  { id: "m21", tipo: "mc", secao: "7. Desemprego",
+  { id: "m21", reserva: true, tipo: "mc", secao: "7. Desemprego",
     texto: "👷 A TAXA NATURAL de desemprego é formada por:",
     opcoes: ["Desemprego friccional + estrutural", "Desemprego cíclico apenas", "Desemprego friccional + cíclico", "Todo o desemprego da economia"], certa: 0,
     comentario: "É o desemprego que persiste mesmo com a economia operando no seu nível normal; o cíclico é o desvio em relação a ela." },
 
   // ---- 8. Poupança e investimento: com e sem Estado ----
-  { id: "m22", tipo: "numero", secao: "8. Poupança com e sem Estado",
+  { id: "m22", reserva: true, tipo: "numero", secao: "8. Poupança com e sem Estado",
     texto: "🏦 Economia fechada e SEM governo: renda Y = 1.000 e consumo C = 700. Qual é a poupança (S)?",
     unidade: "R$ bi", gabarito: 300,
     comentario: "Sem governo: S = Y − C = 300. Em economia fechada, essa poupança financia o investimento: S = I." },
 
   { id: "m23", tipo: "numero", secao: "8. Poupança com e sem Estado",
-    texto: "🏦 Agora COM governo: Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
+    texto: "🏦 Economia fechada. SEM governo, a poupança seria S = Y − C. Agora COM governo: renda Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
     unidade: "R$ bi", gabarito: 150,
     comentario: "Poupança privada = Y − T − C = 200. Poupança pública = T − G = −50 (déficit). Poupança nacional = 200 − 50 = 150 (= Y − C − G)." },
 
@@ -171,15 +172,19 @@ const PERGUNTAS = [
       points: [{ x: 10, y: 5, label: "E1", color: "good" }, { x: 8, y: 6, label: "E2", color: "bad" }] },
     comentario: "Juros sobem (5% → 6%) e o investimento privado cai (10 → 8): é o efeito deslocamento (crowding out). Parte da poupança que financiaria empresas passa a financiar o governo." },
 
-  { id: "m25", tipo: "texto", secao: "8. Poupança com e sem Estado",
+  { id: "m25", reserva: true, tipo: "texto", secao: "8. Poupança com e sem Estado",
     texto: "🏦 Em uma frase: por que um déficit público persistente pode prejudicar o crescimento de longo prazo?",
     comentario: "Juros mais altos reduzem o investimento; com menos investimento, o estoque de capital cresce menos, e a produtividade e o padrão de vida crescem mais devagar." },
 
   // ---- Fechamento ----
-  { id: "m26", tipo: "scale", secao: "Fechamento",
+  { id: "m26", reserva: true, tipo: "scale", secao: "Fechamento",
     texto: "O quanto você se sente pronto para a avaliação de Macroeconomia nesse conteúdo?",
     minLabel: "Nada pronto", maxLabel: "Totalmente pronto" }
 ];
+
+// A sessão usa 20 perguntas. As marcadas com "reserva: true" ficam guardadas:
+// para trazer uma de volta, basta apagar o "reserva: true" dela.
+const PERGUNTAS = PERGUNTAS_TODAS.filter(p => !p.reserva);
 
 // Embaralha as alternativas de cada pergunta "mc" com ordem FIXA (derivada do id),
 // para a certa nao cair sempre na mesma posicao. Aluno e apresentador veem a mesma ordem,
