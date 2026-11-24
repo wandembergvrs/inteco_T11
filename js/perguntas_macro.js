@@ -141,11 +141,6 @@ const PERGUNTAS_TODAS = [
     comentario: "É o desemprego que persiste mesmo com a economia operando no seu nível normal; o cíclico é o desvio em relação a ela." },
 
   // ---- 8. Poupança e investimento em economia fechada ----
-  { id: "m22", reserva: true, tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Economia fechada e SEM governo: renda Y = 1.000 e consumo C = 700. Qual é a poupança (S)?",
-    unidade: "R$ bi", gabarito: 300,
-    comentario: "Sem governo: S = Y − C = 300. Em economia fechada, essa poupança financia o investimento: S = I." },
-
   { id: "m23", tipo: "numero", secao: "8. Poupança em economia fechada",
     texto: "🏦 Numa economia FECHADA (sem comércio com o exterior): renda Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
     unidade: "R$ bi", gabarito: 150,
