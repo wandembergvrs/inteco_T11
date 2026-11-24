@@ -147,22 +147,22 @@ const PERGUNTAS_TODAS = [
     comentario: "Em economia fechada, Y = C + I + G, então S = Y − C − G = 1.000 − 650 − 200 = 150, e a poupança é igual ao investimento (S = I). Separando: poupança privada = Y − T − C = 200; poupança pública = T − G = −50 (déficit)." },
 
   { id: "m24", tipo: "mc", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Economia fechada. No mercado de fundos de empréstimo (gráfico), a curva crescente é a oferta de fundos (poupança nacional) e a decrescente é a demanda (investimento). O governo, que tinha orçamento equilibrado, passa a ter DÉFICIT. O que acontece?",
+    texto: "🏦 Economia fechada. No mercado de fundos de empréstimo (gráfico), a curva crescente é a oferta de fundos (poupança nacional) e a decrescente é a demanda (investimento). O governo gasta mais sem arrecadar mais, e o DÉFICIT público AUMENTA. O que acontece com as curvas?",
     opcoes: ["A oferta de fundos se desloca para a esquerda: os juros sobem e o investimento cai", "A demanda por fundos se desloca para a direita: juros e investimento sobem", "A oferta de fundos se desloca para a direita: os juros caem", "Nada muda, pois o déficit não afeta a poupança"], certa: 0,
     grafico: { xmin: 0, xmax: 20, ymin: 0, ymax: 10, xlabel: "Fundos (S, I)", ylabel: "Juros r (%)",
       curves: [
         { formula: "0.5*x", domain: [0, 20], color: "good", label: "S (poupança)", labelT: 0.72, labelDy: 14 },
         { formula: "10 - 0.5*x", domain: [0, 20], color: "acc", label: "I (investimento)", labelT: 0.8 }],
       points: [{ x: 10, y: 5, label: "E1", color: "good" }] },
-    comentario: "O déficit é poupança pública negativa: reduz a poupança nacional (S = privada + pública), e a curva de oferta de fundos se desloca para a esquerda." },
+    comentario: "O déficit é poupança pública negativa: quando ele aumenta, a poupança nacional (privada + pública) cai, e a curva de poupança se desloca para a ESQUERDA. A curva de investimento não se move." },
 
   { id: "m24b", tipo: "mc", secao: "8. Poupança em economia fechada",
-    texto: "🏦 O gráfico agora mostra a curva de poupança COM o déficit (tracejada). Comparando o novo equilíbrio E2 com o inicial E1, o que aconteceu com os juros e com o investimento privado?",
+    texto: "🏦 O gráfico mostra o DESLOCAMENTO da curva de poupança depois do aumento do déficit público: de S1 para S2 (tracejada). Comparando o novo equilíbrio E2 com o inicial E1, o que aconteceu com os juros e com o investimento privado?",
     opcoes: ["Juros subiram de 5% para 6% e o investimento caiu de 10 para 8", "Juros caíram de 5% para 4% e o investimento subiu de 10 para 12", "Juros subiram de 5% para 6% e o investimento também subiu", "Nada mudou: o governo apenas tomou o lugar das famílias"], certa: 0,
     grafico: { xmin: 0, xmax: 20, ymin: 0, ymax: 10, xlabel: "Fundos (S, I)", ylabel: "Juros r (%)",
       curves: [
-        { formula: "0.5*x", domain: [0, 20], color: "good", label: "S sem déficit", labelT: 0.72, labelDy: 14 },
-        { formula: "0.5*x + 2", domain: [0, 16], color: "bad", dashed: true, label: "S com déficit", labelT: 0.22 },
+        { formula: "0.5*x", domain: [0, 20], color: "good", label: "S1 (antes)", labelT: 0.72, labelDy: 14 },
+        { formula: "0.5*x + 2", domain: [0, 16], color: "bad", dashed: true, label: "S2 (déficit maior)", labelT: 0.3, labelDy: -10 },
         { formula: "10 - 0.5*x", domain: [0, 20], color: "acc", label: "I (investimento)", labelT: 0.8 }],
       points: [{ x: 10, y: 5, label: "E1", color: "good" }, { x: 8, y: 6, label: "E2", color: "bad" }] },
     comentario: "Juros sobem (5% → 6%) e o investimento privado cai (10 → 8): é o efeito deslocamento (crowding out). Parte da poupança que financiaria empresas passa a financiar o governo." },
