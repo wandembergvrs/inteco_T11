@@ -92,11 +92,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
-  <script src="js/mini-charts.js?v=1"></script>
+  <script src="js/mini-charts.js?v=3"></script>
   <script>
     // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
     const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
-    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=2' : 'perguntas.js?v=2') + '"><' + '/script>');
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=3' : 'perguntas.js?v=2') + '"><' + '/script>');
   </script>
   <script>
     const $ = id => document.getElementById(id);
@@ -201,6 +201,7 @@
         try { mountStaticChart('graficoReflexaoCanvas', pergunta.grafico, { w: 400, h: 220 }); }
         catch (e) { console.error('[enquete] erro no grafico:', e); }
       }
+      if (pergunta.tabela) montarTabela(graficoDiv, pergunta.tabela);
       mostraTela('telaReflexao');
     }
 
@@ -221,6 +222,28 @@
       $('resultadoTotal').textContent = `${total} resposta(s)`;
       const div = $('resultadoBarras');
       div.innerHTML = '';
+
+      const meu = votos[voterId];
+      if (meu !== undefined && pergunta.tipo !== 'texto') {
+        let txt = '', certo = null;
+        if (pergunta.tipo === 'mc') {
+          txt = `Você marcou: ${pergunta.opcoes[meu] ?? meu}`;
+          if (pergunta.certa != null) certo = Number(meu) === pergunta.certa;
+        } else if (pergunta.tipo === 'numero') {
+          txt = `Você respondeu: ${comUnidade(pergunta, meu)}`;
+          certo = respostaNumericaCerta(pergunta, meu);
+        } else {
+          txt = `Você marcou: ${meu}`;
+        }
+        const minha = document.createElement('div');
+        minha.className = 'resposta-texto';
+        minha.style.fontWeight = '700';
+        minha.style.marginBottom = '14px';
+        if (certo === true) { txt = '✅ ' + txt + ' — acertou!'; minha.style.borderColor = '#22c55e'; minha.style.color = '#86efac'; }
+        if (certo === false) { txt = '❌ ' + txt; minha.style.borderColor = '#b91c1c'; minha.style.color = '#fca5a5'; }
+        minha.textContent = txt;
+        div.appendChild(minha);
+      }
 
       if (pergunta.tipo === 'mc') {
         const contagem = pergunta.opcoes.map(() => 0);
@@ -257,14 +280,19 @@
         const media = numeros.length ? soma / numeros.length : 0;
         const somaEl = document.createElement('div');
         somaEl.className = 'media';
-        somaEl.textContent = pergunta.sustentavel != null
-          ? `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`
-          : `Média da turma: ${fmtNum(media)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
-        div.appendChild(somaEl);
+        if (pergunta.sustentavel != null) {
+          somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        } else if (pergunta.gabarito != null) {
+          const ok = numeros.filter(v => respostaNumericaCerta(pergunta, v)).length;
+          somaEl.textContent = numeros.length ? `${ok} de ${numeros.length} acertaram (${Math.round(ok / numeros.length * 100)}%)` : '';
+        } else if (numeros.length) {
+          somaEl.textContent = `Média da turma: ${comUnidade(pergunta, media)}`;
+        }
+        if (somaEl.textContent) div.appendChild(somaEl);
         if (pergunta.gabarito != null) {
           const gab = document.createElement('div');
           gab.className = 'media';
-          gab.textContent = `✓ Resposta: ${fmtNum(pergunta.gabarito)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
+          gab.textContent = `✓ Resposta: ${comUnidade(pergunta, pergunta.gabarito)}`;
           div.appendChild(gab);
         }
         if (pergunta.sustentavel != null && numeros.length) {
@@ -308,6 +336,7 @@
         try { mountStaticChart('graficoPerguntaCanvas', pergunta.grafico, { w: 400, h: 220 }); }
         catch (e) { console.error('[enquete] erro no grafico:', e); }
       }
+      if (pergunta.tabela) montarTabela(graficoDiv, pergunta.tabela);
       const area = $('areaResposta');
       area.innerHTML = '';
 

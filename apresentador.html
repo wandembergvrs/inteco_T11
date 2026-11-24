@@ -80,6 +80,13 @@
     <section class="panel palco">
       <div id="semPergunta" class="vazio">Selecione uma pergunta na lista ao lado para projetar.</div>
       <div id="areaPalco" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <span id="contadorPalco" style="font-size:13px;color:var(--muted);font-weight:700"></span>
+          <span style="display:flex;gap:8px">
+            <button id="btnAnterior">◀ Anterior</button>
+            <button id="btnProxima">Próxima ▶</button>
+          </span>
+        </div>
         <div class="pergunta" id="textoPalco"></div>
         <div id="graficoPalco" style="margin-bottom:16px"></div>
         <div id="resultados"></div>
@@ -97,11 +104,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
-  <script src="js/mini-charts.js?v=1"></script>
+  <script src="js/mini-charts.js?v=3"></script>
   <script>
     // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
     const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
-    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=2' : 'perguntas.js?v=2') + '"><' + '/script>');
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=3' : 'perguntas.js?v=2') + '"><' + '/script>');
   </script>
   <script>
     const $ = id => document.getElementById(id);
@@ -129,7 +136,15 @@
     function montarLista() {
       const lista = $('listaPerguntas');
       lista.innerHTML = '';
+      let secaoAnterior = null;
       PERGUNTAS.forEach(p => {
+        if (p.secao && p.secao !== secaoAnterior) {
+          secaoAnterior = p.secao;
+          const cab = document.createElement('div');
+          cab.textContent = p.secao;
+          cab.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);padding:14px 4px 4px';
+          lista.appendChild(cab);
+        }
         const div = document.createElement('div');
         div.className = 'item-pergunta';
         div.id = 'item-' + p.id;
@@ -154,6 +169,7 @@
     let unsubVotos = null;
     let unsubRevealed = null;
     let revelacaoAtual = false;
+    let ultimosVotos = {};
     let unsubAberto = null;
     let abertoAtual = false;
 
@@ -164,7 +180,7 @@
         document.querySelectorAll('.item-pergunta').forEach(el => el.classList.remove('ativa'));
         if (perguntaAtivaId) {
           const el = $('item-' + perguntaAtivaId);
-          if (el) el.classList.add('ativa');
+          if (el) { el.classList.add('ativa'); el.scrollIntoView({ block: 'nearest' }); }
           renderPalco(perguntaAtivaId);
         } else {
           $('semPergunta').classList.remove('hidden');
@@ -185,11 +201,20 @@
         try { mountStaticChart('graficoPalcoCanvas', pergunta.grafico, { w: 560, h: 280 }); }
         catch (e) { console.error('[apresentador] erro no grafico:', e); }
       }
+      if (pergunta.tabela) montarTabela($('graficoPalco'), pergunta.tabela, 20);
 
+      const pos = PERGUNTAS.findIndex(p => p.id === id);
+      $('contadorPalco').textContent = `Pergunta ${pos + 1} de ${PERGUNTAS.length}` + (pergunta.secao ? ` · ${pergunta.secao}` : '');
+      $('btnAnterior').disabled = pos <= 0;
+      $('btnProxima').disabled = pos >= PERGUNTAS.length - 1;
+      $('btnAnterior').onclick = () => { if (pos > 0) ativarPergunta(PERGUNTAS[pos - 1].id); };
+      $('btnProxima').onclick = () => { if (pos < PERGUNTAS.length - 1) ativarPergunta(PERGUNTAS[pos + 1].id); };
+
+      ultimosVotos = {};
       if (unsubVotos) unsubVotos.off();
       const ref = db.ref(`sessions/${codigoSessao}/votes/${id}`);
       unsubVotos = ref;
-      ref.on('value', (snap) => renderResultados(pergunta, snap.val() || {}));
+      ref.on('value', (snap) => { ultimosVotos = snap.val() || {}; renderResultados(pergunta, ultimosVotos); });
 
       if (unsubRevealed) unsubRevealed.off();
       const revRef = db.ref(`sessions/${codigoSessao}/revealed/${id}`);
@@ -198,11 +223,12 @@
         revelacaoAtual = snap.val() === true;
         // gabarito numerico e comentario aparecem no palco so depois de publicar
         const partes = [];
-        if (pergunta.gabarito != null) partes.push(`✓ Resposta: ${fmtNum(pergunta.gabarito)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`);
+        if (pergunta.gabarito != null) partes.push(`✓ Resposta: ${comUnidade(pergunta, pergunta.gabarito)}`);
         if (pergunta.comentario) partes.push('💡 ' + pergunta.comentario);
         const cp = $('comentarioPalco');
         cp.textContent = partes.join('  —  ');
         cp.style.display = (revelacaoAtual && partes.length) ? 'block' : 'none';
+        renderResultados(pergunta, ultimosVotos);
         $('btnPublicar').textContent = revelacaoAtual ? '✓ Publicado — ocultar dos alunos' : 'Publicar resultado para os alunos';
         $('btnPublicar').classList.toggle('publicado', revelacaoAtual);
       });
@@ -240,8 +266,8 @@
           const linha = document.createElement('div');
           linha.className = 'barra-linha';
           linha.innerHTML = `
-            <div class="barra-label"><span>${texto}${idx === pergunta.certa ? ' ✓' : ''}</span><span>${contagem[idx]} (${pct}%)</span></div>
-            <div class="barra-fundo"><div class="barra-fill${idx === pergunta.certa ? ' certa' : ''}" style="width:${pct}%"></div></div>`;
+            <div class="barra-label"><span>${texto}${(revelacaoAtual && idx === pergunta.certa) ? ' ✓' : ''}</span><span>${contagem[idx]} (${pct}%)</span></div>
+            <div class="barra-fundo"><div class="barra-fill${(revelacaoAtual && idx === pergunta.certa) ? ' certa' : ''}" style="width:${pct}%"></div></div>`;
           div.appendChild(linha);
         });
       } else if (pergunta.tipo === 'scale') {
@@ -268,15 +294,24 @@
         const lista = document.createElement('div');
         lista.style.fontSize = '14px';
         lista.style.color = 'var(--muted)';
-        lista.textContent = numeros.length ? `Valores: ${numeros.join(', ')}` : 'Nenhuma resposta ainda.';
+        const ocultar = pergunta.gabarito != null && !revelacaoAtual;
+        lista.textContent = !numeros.length ? 'Nenhuma resposta ainda.'
+          : ocultar ? 'Respostas ocultas até você publicar o resultado.'
+          : `Valores: ${numeros.map(fmtNum).join(' · ')}`;
         div.appendChild(lista);
 
         const somaEl = document.createElement('div');
         somaEl.className = 'media';
-        somaEl.textContent = pergunta.sustentavel != null
-          ? `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`
-          : `Média da turma: ${fmtNum(media)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
-        div.appendChild(somaEl);
+        if (pergunta.sustentavel != null) {
+          somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        } else if (pergunta.gabarito != null) {
+          const ok = numeros.filter(v => respostaNumericaCerta(pergunta, v)).length;
+          somaEl.textContent = (ocultar || !numeros.length) ? ''
+            : `${ok} de ${numeros.length} acertaram (${Math.round(ok / numeros.length * 100)}%)`;
+        } else if (numeros.length) {
+          somaEl.textContent = `Média da turma: ${comUnidade(pergunta, media)}`;
+        }
+        if (somaEl.textContent) div.appendChild(somaEl);
 
         if (pergunta.sustentavel != null && numeros.length) {
           const aviso = document.createElement('div');

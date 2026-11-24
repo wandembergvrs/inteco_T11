@@ -326,3 +326,48 @@ function mountStaticChart(holderId, cfg, opts) {
   const ctx = canvas.getContext("2d");
   renderChart(ctx, cfg, w, h);
 }
+
+// ---- Helpers da enquete (compartilhados por enquete.html e apresentador.html) ----
+
+// Tabela de dados de uma pergunta: { cabecalho: [...], linhas: [[...], ...] }
+function montarTabela(holder, tabela, fontPx) {
+  if (!holder || !tabela) return;
+  const t = document.createElement('table');
+  t.style.cssText = 'border-collapse:collapse;margin:0 auto 14px;font-size:' + (fontPx || 14) + 'px;font-weight:600';
+  const celula = (tag, txt, i) => {
+    const c = document.createElement(tag);
+    c.textContent = txt;
+    c.style.cssText = 'border:1px solid #1f2937;padding:8px 12px;text-align:' + (i === 0 ? 'left' : 'center') +
+      (tag === 'th' ? ';background:#0b1425;color:#94a3b8' : '');
+    return c;
+  };
+  if (tabela.cabecalho) {
+    const tr = document.createElement('tr');
+    tabela.cabecalho.forEach((h, i) => tr.appendChild(celula('th', h, i)));
+    t.appendChild(tr);
+  }
+  (tabela.linhas || []).forEach(l => {
+    const tr = document.createElement('tr');
+    l.forEach((v, i) => tr.appendChild(celula('td', v, i)));
+    t.appendChild(tr);
+  });
+  holder.appendChild(t);
+}
+
+// Resposta numerica confere com o gabarito? (null se a pergunta nao tem gabarito)
+function respostaNumericaCerta(pergunta, valor) {
+  if (pergunta.gabarito == null) return null;
+  const tol = pergunta.tolerancia != null ? pergunta.tolerancia : Math.max(0.005, Math.abs(pergunta.gabarito) * 0.005);
+  return Math.abs(Number(valor) - pergunta.gabarito) <= tol;
+}
+
+// Numero formatado com a unidade da pergunta: "R$ 66", "R$ 1.000 bi", "20%", "5 R$ por US$"
+function comUnidade(pergunta, valor) {
+  const n = Number(valor).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  const u = pergunta.unidade || '';
+  if (!u) return n;
+  if (u === '%') return n + '%';
+  if (u === 'R$') return 'R$ ' + n;
+  if (u.startsWith('R$ ') && !u.includes('por')) return 'R$ ' + n + u.slice(2);
+  return n + ' ' + u;
+}
