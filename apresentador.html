@@ -66,7 +66,7 @@
       <span style="font-size:12px;color:var(--muted)">Código:</span>
       <input type="text" id="codigo" maxlength="6" placeholder="1234" />
       <button id="btnGerar">Gerar código</button>
-      <span style="font-size:12px;color:var(--muted)">alunos entram em /inteco_T11/enquete.html</span>
+      <span id="dicaLink" style="font-size:12px;color:var(--muted)">alunos entram em /inteco_T11/enquete.html</span>
     </div>
   </header>
 
@@ -83,6 +83,7 @@
         <div class="pergunta" id="textoPalco"></div>
         <div id="graficoPalco" style="margin-bottom:16px"></div>
         <div id="resultados"></div>
+        <div id="comentarioPalco" class="aviso-ok" style="display:none;font-weight:600"></div>
         <div class="total-votos" id="totalVotos"></div>
         <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
           <button id="btnAbrirResposta"></button>
@@ -97,7 +98,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
   <script src="js/mini-charts.js?v=1"></script>
-  <script src="js/perguntas.js?v=2"></script>
+  <script>
+    // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
+    const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=2' : 'perguntas.js?v=2') + '"><' + '/script>');
+  </script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -191,6 +196,13 @@
       unsubRevealed = revRef;
       revRef.on('value', (snap) => {
         revelacaoAtual = snap.val() === true;
+        // gabarito numerico e comentario aparecem no palco so depois de publicar
+        const partes = [];
+        if (pergunta.gabarito != null) partes.push(`✓ Resposta: ${fmtNum(pergunta.gabarito)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`);
+        if (pergunta.comentario) partes.push('💡 ' + pergunta.comentario);
+        const cp = $('comentarioPalco');
+        cp.textContent = partes.join('  —  ');
+        cp.style.display = (revelacaoAtual && partes.length) ? 'block' : 'none';
         $('btnPublicar').textContent = revelacaoAtual ? '✓ Publicado — ocultar dos alunos' : 'Publicar resultado para os alunos';
         $('btnPublicar').classList.toggle('publicado', revelacaoAtual);
       });
@@ -261,7 +273,9 @@
 
         const somaEl = document.createElement('div');
         somaEl.className = 'media';
-        somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        somaEl.textContent = pergunta.sustentavel != null
+          ? `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`
+          : `Média da turma: ${fmtNum(media)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
         div.appendChild(somaEl);
 
         if (pergunta.sustentavel != null && numeros.length) {
@@ -291,6 +305,8 @@
       }
     }
 
+    const fmtNum = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+    if (BANCO === 'macro') $('dicaLink').textContent = 'alunos entram em /inteco_T11/enquete.html?banco=macro (ou pelo card Revisão de Macro no índice)';
     montarLista();
     if (codigoSessao) escutarAtual();
 

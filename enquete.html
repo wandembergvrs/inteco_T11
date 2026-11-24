@@ -93,7 +93,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
   <script src="js/mini-charts.js?v=1"></script>
-  <script src="js/perguntas.js?v=2"></script>
+  <script>
+    // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
+    const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=2' : 'perguntas.js?v=2') + '"><' + '/script>');
+  </script>
   <script>
     const $ = id => document.getElementById(id);
 
@@ -209,6 +213,7 @@
       mostraTela('telaResultado');
     }
 
+    const fmtNum = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
     function renderResultadoAluno(pergunta, votos) {
       const valores = Object.values(votos);
       const total = valores.length;
@@ -252,8 +257,16 @@
         const media = numeros.length ? soma / numeros.length : 0;
         const somaEl = document.createElement('div');
         somaEl.className = 'media';
-        somaEl.textContent = `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`;
+        somaEl.textContent = pergunta.sustentavel != null
+          ? `Soma total: ${soma}${pergunta.unidade ? ' ' + pergunta.unidade : ''} · Média: ${media.toFixed(1)}`
+          : `Média da turma: ${fmtNum(media)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
         div.appendChild(somaEl);
+        if (pergunta.gabarito != null) {
+          const gab = document.createElement('div');
+          gab.className = 'media';
+          gab.textContent = `✓ Resposta: ${fmtNum(pergunta.gabarito)}${pergunta.unidade ? ' ' + pergunta.unidade : ''}`;
+          div.appendChild(gab);
+        }
         if (pergunta.sustentavel != null && numeros.length) {
           const aviso = document.createElement('div');
           aviso.style.marginTop = '10px';
@@ -272,6 +285,14 @@
           linha.textContent = String(texto);
           div.appendChild(linha);
         });
+      }
+      if (pergunta.comentario) {
+        const com = document.createElement('div');
+        com.className = 'resposta-texto';
+        com.style.marginTop = '14px';
+        com.style.borderColor = '#14532d';
+        com.textContent = '💡 ' + pergunta.comentario;
+        div.appendChild(com);
       }
     }
 
@@ -314,10 +335,10 @@
         area.appendChild(labels);
       } else if (pergunta.tipo === 'numero') {
         const input = document.createElement('input');
-        input.type = 'number';
-        input.min = pergunta.min ?? 0;
-        if (pergunta.max != null) input.max = pergunta.max;
-        input.placeholder = 'Digite um número...';
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.autocomplete = 'off';
+        input.placeholder = 'Digite um número (ex.: 5,50)';
         area.appendChild(input);
         if (pergunta.unidade) {
           const un = document.createElement('div');
@@ -329,8 +350,12 @@
         btn.className = 'btn-primary';
         btn.textContent = 'Enviar';
         btn.addEventListener('click', () => {
-          const v = Number(input.value);
-          if (input.value === '' || isNaN(v)) { alert('Digite um número válido.'); return; }
+          const bruto = input.value.trim().replace(/\s/g, '');
+          // "5,50" -> 5.5 ; "1.000" ou "1.000,5" -> milhar com ponto
+          const normal = (bruto.includes(',') || /^-?\d{1,3}(\.\d{3})+$/.test(bruto))
+            ? bruto.replace(/\./g, '').replace(',', '.') : bruto;
+          const v = Number(normal);
+          if (bruto === '' || isNaN(v)) { alert('Digite um número válido.'); return; }
           enviarVoto(id, v);
         });
         area.appendChild(btn);
