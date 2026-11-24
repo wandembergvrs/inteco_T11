@@ -140,19 +140,19 @@ const PERGUNTAS_TODAS = [
     opcoes: ["Desemprego friccional + estrutural", "Desemprego cíclico apenas", "Desemprego friccional + cíclico", "Todo o desemprego da economia"], certa: 0,
     comentario: "É o desemprego que persiste mesmo com a economia operando no seu nível normal; o cíclico é o desvio em relação a ela." },
 
-  // ---- 8. Poupança e investimento: com e sem Estado ----
-  { id: "m22", reserva: true, tipo: "numero", secao: "8. Poupança com e sem Estado",
+  // ---- 8. Poupança e investimento em economia fechada ----
+  { id: "m22", reserva: true, tipo: "numero", secao: "8. Poupança em economia fechada",
     texto: "🏦 Economia fechada e SEM governo: renda Y = 1.000 e consumo C = 700. Qual é a poupança (S)?",
     unidade: "R$ bi", gabarito: 300,
     comentario: "Sem governo: S = Y − C = 300. Em economia fechada, essa poupança financia o investimento: S = I." },
 
-  { id: "m23", tipo: "numero", secao: "8. Poupança com e sem Estado",
-    texto: "🏦 Economia fechada. SEM governo, a poupança seria S = Y − C. Agora COM governo: renda Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
+  { id: "m23", tipo: "numero", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Numa economia FECHADA (sem comércio com o exterior): renda Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
     unidade: "R$ bi", gabarito: 150,
-    comentario: "Poupança privada = Y − T − C = 200. Poupança pública = T − G = −50 (déficit). Poupança nacional = 200 − 50 = 150 (= Y − C − G)." },
+    comentario: "Em economia fechada, Y = C + I + G, então S = Y − C − G = 1.000 − 650 − 200 = 150, e a poupança é igual ao investimento (S = I). Separando: poupança privada = Y − T − C = 200; poupança pública = T − G = −50 (déficit)." },
 
-  { id: "m24", tipo: "mc", secao: "8. Poupança com e sem Estado",
-    texto: "🏦 No mercado de fundos de empréstimo (gráfico), a curva crescente é a oferta de fundos (poupança nacional) e a decrescente é a demanda (investimento). O governo, que tinha orçamento equilibrado, passa a ter DÉFICIT. O que acontece?",
+  { id: "m24", tipo: "mc", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Economia fechada. No mercado de fundos de empréstimo (gráfico), a curva crescente é a oferta de fundos (poupança nacional) e a decrescente é a demanda (investimento). O governo, que tinha orçamento equilibrado, passa a ter DÉFICIT. O que acontece?",
     opcoes: ["A oferta de fundos se desloca para a esquerda: os juros sobem e o investimento cai", "A demanda por fundos se desloca para a direita: juros e investimento sobem", "A oferta de fundos se desloca para a direita: os juros caem", "Nada muda, pois o déficit não afeta a poupança"], certa: 0,
     grafico: { xmin: 0, xmax: 20, ymin: 0, ymax: 10, xlabel: "Fundos (S, I)", ylabel: "Juros r (%)",
       curves: [
@@ -161,7 +161,7 @@ const PERGUNTAS_TODAS = [
       points: [{ x: 10, y: 5, label: "E1", color: "good" }] },
     comentario: "O déficit é poupança pública negativa: reduz a poupança nacional (S = privada + pública), e a curva de oferta de fundos se desloca para a esquerda." },
 
-  { id: "m24b", tipo: "mc", secao: "8. Poupança com e sem Estado",
+  { id: "m24b", tipo: "mc", secao: "8. Poupança em economia fechada",
     texto: "🏦 O gráfico agora mostra a curva de poupança COM o déficit (tracejada). Comparando o novo equilíbrio E2 com o inicial E1, o que aconteceu com os juros e com o investimento privado?",
     opcoes: ["Juros subiram de 5% para 6% e o investimento caiu de 10 para 8", "Juros caíram de 5% para 4% e o investimento subiu de 10 para 12", "Juros subiram de 5% para 6% e o investimento também subiu", "Nada mudou: o governo apenas tomou o lugar das famílias"], certa: 0,
     grafico: { xmin: 0, xmax: 20, ymin: 0, ymax: 10, xlabel: "Fundos (S, I)", ylabel: "Juros r (%)",
@@ -172,7 +172,7 @@ const PERGUNTAS_TODAS = [
       points: [{ x: 10, y: 5, label: "E1", color: "good" }, { x: 8, y: 6, label: "E2", color: "bad" }] },
     comentario: "Juros sobem (5% → 6%) e o investimento privado cai (10 → 8): é o efeito deslocamento (crowding out). Parte da poupança que financiaria empresas passa a financiar o governo." },
 
-  { id: "m25", reserva: true, tipo: "texto", secao: "8. Poupança com e sem Estado",
+  { id: "m25", reserva: true, tipo: "texto", secao: "8. Poupança em economia fechada",
     texto: "🏦 Em uma frase: por que um déficit público persistente pode prejudicar o crescimento de longo prazo?",
     comentario: "Juros mais altos reduzem o investimento; com menos investimento, o estoque de capital cresce menos, e a produtividade e o padrão de vida crescem mais devagar." },
 

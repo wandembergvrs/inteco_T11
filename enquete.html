@@ -96,7 +96,7 @@
   <script>
     // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
     const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
-    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=4' : 'perguntas.js?v=2') + '"><' + '/script>');
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=5' : 'perguntas.js?v=2') + '"><' + '/script>');
   </script>
   <script>
     const $ = id => document.getElementById(id);
