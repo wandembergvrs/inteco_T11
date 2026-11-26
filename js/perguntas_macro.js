@@ -29,6 +29,16 @@ const PERGUNTAS_TODAS = [
     opcoes: ["O exportador brasileiro de soja, que recebe em dólar e converte para reais", "O brasileiro que vai passar férias nos EUA", "A empresa brasileira que importa peças cotadas em dólar", "O brasileiro com dívida em dólar"], certa: 0,
     comentario: "Cada US$ 1.000 exportados passam a render R$ 5.500 em vez de R$ 5.000. Já viagem, importação e dívida em dólar ficam mais caras em reais." },
 
+  { id: "m2b", tipo: "mc", secao: "1. Câmbio nominal",
+    texto: "💱 Agora o caminho inverso: o dólar CAI de R$ 5,50 para R$ 5,00. O que aconteceu com o real, e quem tende a sair ganhando?",
+    opcoes: ["O real se VALORIZOU; ganha quem importa ou viaja para o exterior", "O real se VALORIZOU; ganha o exportador, que recebe em dólar", "O real se DESVALORIZOU; ganha quem importa ou viaja para o exterior", "O real se DESVALORIZOU; ganha o exportador, que recebe em dólar"], certa: 0,
+    comentario: "Menos reais por dólar = real mais forte (valorizado). Tudo que é cotado em dólar fica mais barato em reais: importados, viagens, dívidas em dólar. O exportador recebe menos reais por dólar vendido." },
+
+  { id: "m2c", tipo: "numero", secao: "1. Câmbio nominal",
+    texto: "💱 Um celular custa US$ 200 numa loja dos EUA. Com o dólar a R$ 5,50, quanto ele custa em reais (sem impostos nem frete)?",
+    unidade: "R$", gabarito: 1100,
+    comentario: "Preço em reais = preço em dólares × taxa de câmbio = 200 × 5,50 = R$ 1.100. Se o dólar subisse para R$ 6,00, o mesmo celular passaria a custar R$ 1.200." },
+
   // ---- 2. Paridade do poder de compra e índice Big Mac ----
   { id: "m3", tipo: "numero", secao: "2. PPC e índice Big Mac",
     texto: "🍔 Um hambúrguer custa R$ 25,00 no Brasil. Nos EUA, o mesmo hambúrguer custa US$ 5,00. Pela paridade do poder de compra (PPC), qual deveria ser a taxa de câmbio (R$ por US$)?",
@@ -39,6 +49,11 @@ const PERGUNTAS_TODAS = [
     texto: "🍔 A PPC aponta R$ 5,00 por dólar, mas o câmbio de mercado está em R$ 5,50. Um americano troca US$ 5,00 e recebe R$ 27,50, mais do que os R$ 25,00 que o hambúrguer custa no Brasil. Pela lógica do índice Big Mac, o real está:",
     opcoes: ["Subvalorizado (barato demais) em relação ao dólar", "Sobrevalorizado (caro demais) em relação ao dólar", "Exatamente na paridade", "A PPC não permite comparar"], certa: 0,
     comentario: "Em dólares, o hambúrguer brasileiro sai a 25 / 5,50 = US$ 4,55, abaixo dos US$ 5,00 dos EUA. O real está cerca de 9% subvalorizado pelo critério da PPC." },
+
+  { id: "m4b", tipo: "mc", secao: "2. PPC e índice Big Mac",
+    texto: "🍔 Outro país, mesma lógica: o hambúrguer custa 30 pesos lá e US$ 5,00 nos EUA, então a PPC aponta 6 pesos por dólar. Mas o câmbio de mercado está em 4 pesos por dólar. Pela PPC, o peso está:",
+    opcoes: ["Sobrevalorizado (caro demais) em relação ao dólar", "Subvalorizado (barato demais) em relação ao dólar", "Exatamente na paridade", "A PPC não permite comparar"], certa: 0,
+    comentario: "Em dólares, o hambúrguer desse país sai a 30 / 4 = US$ 7,50, acima dos US$ 5,00 dos EUA. O país está caro em dólar: a moeda está sobrevalorizada. Regra prática: câmbio de mercado ABAIXO da PPC = moeda sobrevalorizada; ACIMA = subvalorizada." },
 
   { id: "m5", tipo: "mc", secao: "2. PPC e índice Big Mac",
     texto: "🍔 O índice Big Mac, publicado pela revista The Economist, é um indicador que:",
@@ -70,6 +85,21 @@ const PERGUNTAS_TODAS = [
     texto: "📈 Para combater uma inflação de DEMANDA, o Banco Central costuma:",
     opcoes: ["Subir a taxa de juros (Selic), encarecendo o crédito e esfriando a demanda", "Baixar a taxa de juros para estimular a produção", "Congelar todos os preços por decreto", "Indexar todos os contratos à inflação passada"], certa: 0,
     comentario: "Juros mais altos encarecem o crédito e reduzem consumo e investimento. Contra a inflação de custos, o mesmo remédio custa mais caro em produção e emprego, porque a origem do problema está na oferta." },
+
+  { id: "m9b", tipo: "numero", secao: "3. Inflação",
+    texto: "📈 O índice de preços ao consumidor passou de 200 em dezembro de um ano para 210 em dezembro do ano seguinte. De quanto foi a inflação do período, em %?",
+    unidade: "%", gabarito: 5,
+    comentario: "Inflação = variação percentual do índice de preços = (210 − 200) / 200 = 5%. A inflação é a alta do NÍVEL GERAL de preços, não a de um produto isolado." },
+
+  { id: "m9c", tipo: "numero", secao: "3. Inflação",
+    texto: "📈 Uma aplicação rendeu 10% no ano (juros nominais). No mesmo ano, a inflação foi de 4%. De aproximadamente quanto foi o juro REAL, em %?",
+    unidade: "%", gabarito: 6, tolerancia: 0.3,
+    comentario: "Juro real ≈ juro nominal − inflação = 10% − 4% = 6% (a conta exata dá 1,10 / 1,04 − 1 = 5,8%). O juro real mede o quanto o PODER DE COMPRA de quem aplicou aumentou." },
+
+  { id: "m9d", tipo: "mc", secao: "3. Inflação",
+    texto: "📈 João emprestou dinheiro a Maria a juros FIXOS de 8% ao ano, quando todos esperavam inflação de 4%. A inflação acabou sendo de 10%. Quem saiu ganhando com essa inflação inesperada?",
+    opcoes: ["Maria (a devedora): ela paga a dívida com um dinheiro que vale menos", "João (o credor): ele recebe mais juros do que esperava", "Os dois ganham, porque os preços subiram para todos", "Ninguém: a inflação não afeta contratos com juros fixos"], certa: 0,
+    comentario: "O juro real combinado era de cerca de 4% (8 − 4), mas virou cerca de −2% (8 − 10). Inflação inesperada transfere riqueza do credor para o devedor." },
 
   // ---- 4. PIB nominal e real ----
   { id: "m11", tipo: "numero", secao: "4. PIB nominal e real",
@@ -108,6 +138,17 @@ const PERGUNTAS_TODAS = [
     opcoes: ["Um corte de cabelo feito hoje num salão em Brasília", "A compra de um carro usado fabricado em 2019", "O pagamento do Bolsa Família a uma família", "A farinha comprada pela padaria para fazer o pão que ela vende"], certa: 0,
     comentario: "Carro usado já entrou no PIB de 2019; transferência não remunera produção; a farinha é bem intermediário (já está no preço do pão). O corte de cabelo é serviço final produzido no ano." },
 
+  { id: "m15b", tipo: "numero", secao: "5. Cálculo do PIB",
+    texto: "🏭 Uma economia só produz pão, em três etapas (tabela). Qual é o PIB dessa economia, em R$?",
+    tabela: { cabecalho: ["Etapa", "Venda"], linhas: [["Fazendeiro vende trigo ao moinho", "R$ 100"], ["Moinho vende farinha à padaria", "R$ 250"], ["Padaria vende pão às famílias", "R$ 400"]] },
+    unidade: "R$", gabarito: 400,
+    comentario: "O PIB conta só o bem FINAL: R$ 400. Somar as três vendas (750) contaria o trigo três vezes e a farinha duas. Dá o mesmo pelo valor adicionado: 100 (fazendeiro) + 150 (moinho) + 150 (padaria) = 400." },
+
+  { id: "m15c", tipo: "mc", secao: "5. Cálculo do PIB",
+    texto: "🏭 Qual destas atividades NÃO entra no PIB, embora gere bem-estar?",
+    opcoes: ["O trabalho doméstico não remunerado, como cozinhar para a própria família", "A consulta paga a um médico particular", "A construção de uma casa nova", "O salário de um professor da rede pública"], certa: 0,
+    comentario: "O PIB mede a produção vendida no mercado (mais os serviços do governo, pelo custo). Trabalho doméstico não remunerado, lazer e qualidade do meio ambiente ficam de fora: por isso o PIB é uma boa medida de produção, mas imperfeita de bem-estar." },
+
   // ---- 6. Capital físico e capital humano ----
   { id: "m16", tipo: "mc", secao: "6. Capital físico e humano",
     texto: "🛠️ Uma metalúrgica compra uma nova máquina de solda e, no mesmo mês, paga um curso técnico de soldagem para seus funcionários. Cada uma dessas decisões aumenta, respectivamente:",
@@ -118,6 +159,11 @@ const PERGUNTAS_TODAS = [
     texto: "🛠️ Qual destes itens NÃO é capital físico?",
     opcoes: ["O conhecimento acumulado pelos engenheiros de uma empresa", "Uma rodovia", "Os computadores de um escritório", "O galpão de uma fábrica"], certa: 0,
     comentario: "Conhecimento dos trabalhadores é capital humano. Os dois tipos de capital elevam a produtividade e, portanto, o padrão de vida." },
+
+  { id: "m17b", tipo: "mc", secao: "6. Capital físico e humano",
+    texto: "🛠️ Dois países têm o mesmo número de trabalhadores, mas no país A cada trabalhador produz o dobro do que produz no país B. Qual destas explicações NÃO ajuda a entender a diferença de produtividade?",
+    opcoes: ["O país A tem mais moeda em circulação", "O país A tem mais máquinas e equipamentos por trabalhador", "Os trabalhadores do país A têm mais escolaridade e treinamento", "O país A usa tecnologias de produção mais avançadas"], certa: 0,
+    comentario: "A produtividade depende de capital físico, capital humano, recursos naturais e conhecimento tecnológico. Imprimir mais moeda não aumenta o que cada trabalhador produz: no longo prazo, só eleva os preços." },
 
   // ---- 7. Tipos de desemprego ----
   { id: "m18", tipo: "mc", fixa: true, secao: "7. Desemprego",
@@ -140,11 +186,42 @@ const PERGUNTAS_TODAS = [
     opcoes: ["Desemprego friccional + estrutural", "Desemprego cíclico apenas", "Desemprego friccional + cíclico", "Todo o desemprego da economia"], certa: 0,
     comentario: "É o desemprego que persiste mesmo com a economia operando no seu nível normal; o cíclico é o desvio em relação a ela." },
 
+  { id: "m21b", tipo: "numero", secao: "7. Desemprego",
+    texto: "👷 Numa cidade (tabela), qual é a TAXA DE DESEMPREGO, em %?",
+    tabela: { cabecalho: ["Situação", "Pessoas"], linhas: [["Ocupadas (trabalhando)", "90"], ["Desocupadas (sem trabalho e procurando)", "10"], ["Fora da força de trabalho (estudantes, aposentados...)", "50"]] },
+    unidade: "%", gabarito: 10,
+    comentario: "Força de trabalho = ocupados + desocupados = 90 + 10 = 100. Taxa de desemprego = desocupados / força de trabalho = 10 / 100 = 10%. Quem está fora da força de trabalho não entra na conta (dividir por 150 é o erro mais comum)." },
+
+  { id: "m21c", tipo: "mc", secao: "7. Desemprego",
+    texto: "👷 Pedro perdeu o emprego, procurou vaga por um ano e, desanimado, DESISTIU de procurar. Para as estatísticas, Pedro agora é:",
+    opcoes: ["Fora da força de trabalho (desalentado): não conta como desempregado", "Desempregado, e por isso a taxa de desemprego sobe", "Ocupado, porque ainda pode voltar a trabalhar", "Desempregado friccional"], certa: 0,
+    comentario: "Só é desempregado quem NÃO tem trabalho e ESTÁ PROCURANDO. Quando alguém desiste de procurar, sai da força de trabalho, e a taxa de desemprego pode até cair sem que ninguém tenha conseguido emprego." },
+
   // ---- 8. Poupança e investimento em economia fechada ----
+  // Sequência em quatro passos, com os mesmos dados: privada -> pública -> nacional -> investimento.
+  { id: "m23p", tipo: "numero", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Passo 1 de 4 — Economia FECHADA (sem comércio com o exterior), dados na tabela. A poupança PRIVADA é o que sobra para as famílias depois de pagar impostos e consumir. Quanto é a poupança privada?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    unidade: "R$ bi", gabarito: 200,
+    comentario: "Poupança privada = renda − impostos − consumo = Y − T − C = 1.000 − 150 − 650 = 200. É a poupança das famílias e empresas." },
+
+  { id: "m23g", tipo: "mc", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Passo 2 de 4 — Mesmos dados (tabela). A poupança PÚBLICA é o que sobra para o governo: o que ele arrecada menos o que ele gasta. Qual é a situação do governo?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    opcoes: ["Déficit de 50: a poupança pública é NEGATIVA (−50)", "Superávit de 50: a poupança pública é positiva (+50)", "Orçamento equilibrado: a poupança pública é zero", "Déficit de 200, que é o total dos gastos do governo"], certa: 0,
+    comentario: "Poupança pública = impostos − gastos do governo = T − G = 150 − 200 = −50. O governo gasta mais do que arrecada: tem déficit, e precisa tomar 50 emprestados." },
+
   { id: "m23", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Numa economia FECHADA (sem comércio com o exterior): renda Y = 1.000, consumo C = 650, impostos T = 150 e gastos do governo G = 200. Qual é a poupança NACIONAL?",
+    texto: "🏦 Passo 3 de 4 — A poupança NACIONAL é a soma das duas: poupança privada (200) + poupança pública (−50). Quanto é a poupança nacional?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
     unidade: "R$ bi", gabarito: 150,
-    comentario: "Em economia fechada, Y = C + I + G, então S = Y − C − G = 1.000 − 650 − 200 = 150, e a poupança é igual ao investimento (S = I). Separando: poupança privada = Y − T − C = 200; poupança pública = T − G = −50 (déficit)." },
+    comentario: "Poupança nacional = privada + pública = 200 + (−50) = 150. Dá o mesmo pelo atalho S = Y − C − G = 1.000 − 650 − 200 = 150: é a parte da renda que não foi consumida nem pelas famílias nem pelo governo." },
+
+  { id: "m23i", tipo: "numero", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Passo 4 de 4 — Nessa economia FECHADA, tudo o que é produzido vira consumo, investimento ou gasto do governo (Y = C + I + G). Com Y = 1.000, C = 650 e G = 200, quanto é o INVESTIMENTO (I)?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    unidade: "R$ bi", gabarito: 150,
+    comentario: "I = Y − C − G = 1.000 − 650 − 200 = 150, exatamente a poupança nacional. Em economia fechada, POUPANÇA = INVESTIMENTO (S = I): as empresas só podem investir o que o país poupou, porque não há como tomar emprestado do exterior. Dos 200 poupados pelas famílias, 50 financiam o déficit do governo e 150 financiam o investimento." },
 
   { id: "m24", tipo: "mc", secao: "8. Poupança em economia fechada",
     texto: "🏦 Economia fechada. No mercado de fundos de empréstimo (gráfico), a curva crescente é a oferta de fundos (poupança nacional) e a decrescente é a demanda (investimento). O governo gasta mais sem arrecadar mais, e o DÉFICIT público AUMENTA. O que acontece com as curvas?",
