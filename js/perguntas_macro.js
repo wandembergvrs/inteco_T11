@@ -201,14 +201,14 @@ const PERGUNTAS_TODAS = [
   // Sequência em cinco passos, na ordem da aula: Y = C + I + G  ->  Y − C − G = I  ->  S ≡ Y − C − G  ->  S = I;
   // depois os impostos líquidos (T) e a divisão de S em poupança privada e pública.
   { id: "m23i", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 1 de 5 — Economia FECHADA (sem comércio com o exterior): tudo o que é produzido vira consumo, investimento ou compra do governo, ou seja, Y = C + I + G. Isolando o investimento: I = Y − C − G. Com os dados da tabela, quanto é o INVESTIMENTO (I)?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Compras do governo, G", "200"]] },
+    texto: "🏦 Passo 1 de 5 — Economia FECHADA (sem comércio com o exterior): tudo o que é produzido vira consumo, investimento ou gasto do governo em bens e serviços, ou seja, Y = C + I + G. Isolando o investimento: I = Y − C − G. Com os dados da tabela, quanto é o INVESTIMENTO (I)?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Gasto do governo em bens e serviços, G", "200"]] },
     unidade: "R$ bi", gabarito: 150,
     comentario: "Y = C + I + G, então Y − C − G = I. Com os números: I = 1.000 − 650 − 200 = 150. É a parte da produção que não foi consumida pelas famílias nem comprada pelo governo." },
 
   { id: "m23", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 2 de 5 — Chamamos de POUPANÇA NACIONAL (S) justamente essa parte da renda que sobra depois do consumo das famílias e das compras do governo: S ≡ Y − C − G. Com os mesmos dados, quanto é a poupança nacional?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Compras do governo, G", "200"]] },
+    texto: "🏦 Passo 2 de 5 — Chamamos de POUPANÇA NACIONAL (S) justamente essa parte da renda que sobra depois de consumir e de fazer o gasto público: S ≡ Y − C − G. Com os mesmos dados, quanto é a poupança nacional?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Gasto do governo em bens e serviços, G", "200"]] },
     unidade: "R$ bi", gabarito: 150,
     comentario: "S ≡ Y − C − G = 1.000 − 650 − 200 = 150. Como Y − C − G = I (passo anterior) e S ≡ Y − C − G, segue que S = I: em economia fechada, a POUPANÇA NACIONAL É IGUAL AO INVESTIMENTO. Não é coincidência dos números; é a mesma conta com dois nomes." },
 
@@ -219,14 +219,14 @@ const PERGUNTAS_TODAS = [
     comentario: "T = impostos arrecadados − transferências = 250 − 100 = 150. É o que o governo retira das famílias EM TERMOS LÍQUIDOS. As transferências não entram em G: G são só as COMPRAS de bens e serviços do governo. Transferência não compra produção, só muda a renda de mãos." },
 
   { id: "m23p", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 4 de 5 — Somando e subtraindo T na definição: S = Y − C − G = (Y − T − C) + (T − G). O primeiro termo é a poupança PRIVADA: o que sobra para as famílias depois de pagar os impostos líquidos e de consumir. Quanto é a poupança privada?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
+    texto: "🏦 Passo 4 de 5 — Somando e subtraindo T na definição: S = Y − C − G = (Y − T − C) + (T − G). O primeiro termo é a poupança PRIVADA: a parte da renda das famílias que não foi gasta nem com consumo nem com imposto líquido. Quanto é a poupança privada?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Gasto do governo em bens e serviços, G", "200"]] },
     unidade: "R$ bi", gabarito: 200,
     comentario: "Poupança privada = Y − T − C = 1.000 − 150 − 650 = 200. Y − T é a renda DISPONÍVEL das famílias: a renda, menos os impostos pagos, mais as transferências recebidas." },
 
   { id: "m23g", tipo: "mc", secao: "8. Poupança em economia fechada",
     texto: "🏦 Passo 5 de 5 — O segundo termo, (T − G), é a poupança PÚBLICA: os impostos líquidos de transferências menos as compras do governo. Com T = 150 e G = 200, qual é a situação do governo?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Gasto do governo em bens e serviços, G", "200"]] },
     opcoes: ["Déficit de 50: a poupança pública é NEGATIVA (−50)", "Superávit de 50: a poupança pública é positiva (+50)", "Orçamento equilibrado: a poupança pública é zero", "Déficit de 200, que é o total das compras do governo"], certa: 0,
     comentario: "Poupança pública = T − G = 150 − 200 = −50: o governo tem déficit. Conferindo com o passo 2: poupança privada + poupança pública = 200 + (−50) = 150 = S = I. Dos 200 poupados pelas famílias, 50 financiam o déficit do governo e 150 financiam o investimento." },
 
@@ -270,7 +270,7 @@ const PERGUNTAS_TODAS = [
 
   { id: "f4", tipo: "numero", secao: "9. Fluxo circular da renda",
     texto: "🔄 Passo 4 de 4 — Modelo completo, com governo e resto do mundo. Há três VAZAMENTOS (poupança das famílias, impostos líquidos e importações) e três INJEÇÕES (investimento, compras do governo e exportações). Para o fluxo ficar em equilíbrio, o total de vazamentos tem de ser igual ao total de injeções. Com os dados da tabela, quanto precisam ser as EXPORTAÇÕES (X)?",
-    tabela: { cabecalho: ["Vazamentos", "R$ bi", "Injeções", "R$ bi"], linhas: [["Poupança das famílias (privada)", "200"], ["Impostos líquidos (T)", "150"], ["Importações (M)", "150"]].map((l, i) => l.concat([["Investimento (I)", "180"], ["Compras do governo (G)", "200"], ["Exportações (X)", "?"]][i])) },
+    tabela: { cabecalho: ["Vazamentos", "R$ bi", "Injeções", "R$ bi"], linhas: [["Poupança das famílias (privada)", "200"], ["Impostos líquidos (T)", "150"], ["Importações (M)", "150"]].map((l, i) => l.concat([["Investimento (I)", "180"], ["Gasto do governo (G)", "200"], ["Exportações (X)", "?"]][i])) },
     unidade: "R$ bi", gabarito: 120,
     comentario: "Vazamentos = poupança das famílias + T + M = 200 + 150 + 150 = 500. Injeções = I + G + X = 180 + 200 + X. Igualando: 380 + X = 500, então X = 120. Note que cada vazamento não precisa ser igual à sua injeção: aqui o governo tem déficit (G > T) e o país importa mais do que exporta (M > X), e as duas diferenças são cobertas pela poupança das famílias, que supera o investimento (200 > 180)." },
 
