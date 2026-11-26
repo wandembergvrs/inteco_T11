@@ -198,28 +198,34 @@ const PERGUNTAS_TODAS = [
     comentario: "Só é desempregado quem NÃO tem trabalho e ESTÁ PROCURANDO. Quando alguém desiste de procurar, sai da força de trabalho, e a taxa de desemprego pode até cair sem que ninguém tenha conseguido emprego." },
 
   // ---- 8. Poupança e investimento em economia fechada ----
-  // Sequência em quatro passos, com os mesmos dados: privada -> pública -> nacional -> investimento.
+  // Sequência em cinco passos, com os mesmos dados: impostos líquidos -> privada -> pública -> nacional -> investimento.
+  { id: "m23t", tipo: "numero", secao: "8. Poupança em economia fechada",
+    texto: "🏦 Passo 1 de 5 — Antes das contas de poupança, um conceito: IMPOSTOS LÍQUIDOS DE TRANSFERÊNCIAS (T). O governo arrecada impostos das famílias, mas devolve uma parte em transferências (aposentadorias, Bolsa Família, seguro-desemprego). Se ele arrecada 250 em impostos e paga 100 em transferências, quanto são os impostos líquidos (T)?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Impostos arrecadados", "250"], ["Transferências pagas às famílias", "100"]] },
+    unidade: "R$ bi", gabarito: 150,
+    comentario: "T = impostos arrecadados − transferências = 250 − 100 = 150. É o que o governo retira das famílias EM TERMOS LÍQUIDOS. As transferências não entram em G: G são só as COMPRAS de bens e serviços do governo (salários de servidores, obras, remédios). Transferência não compra produção, só muda a renda de mãos." },
+
   { id: "m23p", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 1 de 4 — Economia FECHADA (sem comércio com o exterior), dados na tabela. A poupança PRIVADA é o que sobra para as famílias depois de pagar impostos e consumir. Quanto é a poupança privada?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    texto: "🏦 Passo 2 de 5 — Economia FECHADA (sem comércio com o exterior), dados na tabela. A poupança PRIVADA é o que sobra para as famílias depois de pagar os impostos líquidos de transferências (T) e de consumir. Quanto é a poupança privada?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
     unidade: "R$ bi", gabarito: 200,
-    comentario: "Poupança privada = renda − impostos − consumo = Y − T − C = 1.000 − 150 − 650 = 200. É a poupança das famílias e empresas." },
+    comentario: "Poupança privada = renda − impostos líquidos − consumo = Y − T − C = 1.000 − 150 − 650 = 200. Y − T é a renda DISPONÍVEL das famílias: a renda, menos os impostos pagos, mais as transferências recebidas." },
 
   { id: "m23g", tipo: "mc", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 2 de 4 — Mesmos dados (tabela). A poupança PÚBLICA é o que sobra para o governo: o que ele arrecada menos o que ele gasta. Qual é a situação do governo?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
-    opcoes: ["Déficit de 50: a poupança pública é NEGATIVA (−50)", "Superávit de 50: a poupança pública é positiva (+50)", "Orçamento equilibrado: a poupança pública é zero", "Déficit de 200, que é o total dos gastos do governo"], certa: 0,
-    comentario: "Poupança pública = impostos − gastos do governo = T − G = 150 − 200 = −50. O governo gasta mais do que arrecada: tem déficit, e precisa tomar 50 emprestados." },
+    texto: "🏦 Passo 3 de 5 — Mesmos dados (tabela). A poupança PÚBLICA é o que sobra para o governo: os impostos líquidos de transferências (T) menos as compras de bens e serviços (G). Qual é a situação do governo?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
+    opcoes: ["Déficit de 50: a poupança pública é NEGATIVA (−50)", "Superávit de 50: a poupança pública é positiva (+50)", "Orçamento equilibrado: a poupança pública é zero", "Déficit de 200, que é o total das compras do governo"], certa: 0,
+    comentario: "Poupança pública = impostos líquidos − compras do governo = T − G = 150 − 200 = −50. Somando compras e transferências, o governo gasta mais do que arrecada: tem déficit, e precisa tomar 50 emprestados." },
 
   { id: "m23", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 3 de 4 — A poupança NACIONAL é a soma das duas: poupança privada (200) + poupança pública (−50). Quanto é a poupança nacional?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    texto: "🏦 Passo 4 de 5 — A poupança NACIONAL é a soma das duas: poupança privada (200) + poupança pública (−50). Quanto é a poupança nacional?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
     unidade: "R$ bi", gabarito: 150,
     comentario: "Poupança nacional = privada + pública = 200 + (−50) = 150. Dá o mesmo pelo atalho S = Y − C − G = 1.000 − 650 − 200 = 150: é a parte da renda que não foi consumida nem pelas famílias nem pelo governo." },
 
   { id: "m23i", tipo: "numero", secao: "8. Poupança em economia fechada",
-    texto: "🏦 Passo 4 de 4 — Nessa economia FECHADA, tudo o que é produzido vira consumo, investimento ou gasto do governo (Y = C + I + G). Com Y = 1.000, C = 650 e G = 200, quanto é o INVESTIMENTO (I)?",
-    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos, T", "150"], ["Gastos do governo, G", "200"]] },
+    texto: "🏦 Passo 5 de 5 — Nessa economia FECHADA, tudo o que é produzido vira consumo, investimento ou compra do governo (Y = C + I + G). Com Y = 1.000, C = 650 e G = 200, quanto é o INVESTIMENTO (I)?",
+    tabela: { cabecalho: ["Dado", "R$ bi"], linhas: [["Renda (PIB), Y", "1.000"], ["Consumo das famílias, C", "650"], ["Impostos líquidos de transferências, T", "150"], ["Compras do governo, G", "200"]] },
     unidade: "R$ bi", gabarito: 150,
     comentario: "I = Y − C − G = 1.000 − 650 − 200 = 150, exatamente a poupança nacional. Em economia fechada, POUPANÇA = INVESTIMENTO (S = I): as empresas só podem investir o que o país poupou, porque não há como tomar emprestado do exterior. Dos 200 poupados pelas famílias, 50 financiam o déficit do governo e 150 financiam o investimento." },
 
@@ -243,6 +249,29 @@ const PERGUNTAS_TODAS = [
         { formula: "10 - 0.5*x", domain: [0, 20], color: "acc", label: "I (investimento)", labelT: 0.8 }],
       points: [{ x: 10, y: 5, label: "E1", color: "good" }, { x: 8, y: 6, label: "E2", color: "bad" }] },
     comentario: "Juros sobem (5% → 6%) e o investimento privado cai (10 → 8): é o efeito deslocamento (crowding out). Parte da poupança que financiaria empresas passa a financiar o governo." },
+
+  // ---- 9. Fluxo circular da renda (quatro passos: do modelo simples ao completo) ----
+  { id: "f1", tipo: "mc", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Passo 1 de 4 — No modelo mais simples do fluxo circular há só FAMÍLIAS e EMPRESAS, que se encontram em dois mercados. No mercado de FATORES DE PRODUÇÃO, quem vende, quem compra e o que circula?",
+    opcoes: ["As famílias vendem trabalho, terra e capital às empresas e recebem salários, aluguéis e lucros", "As empresas vendem bens e serviços às famílias e recebem a receita das vendas", "As famílias vendem bens e serviços às empresas e recebem salários", "As empresas vendem trabalho às famílias e recebem lucros"], certa: 0,
+    comentario: "São dois mercados e dois sentidos. Mercado de fatores: as famílias são as donas dos fatores e os vendem às empresas, recebendo a RENDA (salários, aluguéis, juros e lucros). Mercado de bens e serviços: as empresas vendem a produção às famílias, que pagam com essa renda (a DESPESA)." },
+
+  { id: "f2", tipo: "numero", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Passo 2 de 4 — Mesma economia, só com famílias e empresas. As empresas pagam às famílias os valores da tabela, e as famílias gastam TODA a renda comprando o que as empresas produzem. Qual é o valor da produção (PIB) dessa economia?",
+    tabela: { cabecalho: ["Pagamento das empresas às famílias", "R$ bi"], linhas: [["Salários", "700"], ["Aluguéis e juros", "150"], ["Lucros", "150"]] },
+    unidade: "R$ bi", gabarito: 1000,
+    comentario: "Renda das famílias = 700 + 150 + 150 = 1.000. Como elas gastam tudo, a despesa é 1.000, e tudo o que foi produzido foi vendido: produto = renda = despesa = 1.000. É por isso que o PIB pode ser medido pelas três óticas e dá o mesmo número: o dinheiro apenas dá a volta no circuito." },
+
+  { id: "f3", tipo: "mc", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Passo 3 de 4 — Agora as famílias recebem 1.000, mas gastam só 900 e POUPAM 100. Esse dinheiro sai do circuito (é um vazamento). O que precisa acontecer para que o fluxo continue em 1.000 e as empresas não fiquem com produção encalhada?",
+    opcoes: ["As empresas precisam INVESTIR 100, tomando emprestada no mercado financeiro a poupança das famílias", "As famílias precisam poupar ainda mais, para o dinheiro render", "As empresas precisam cortar 100 em salários", "Nada: a poupança volta sozinha ao circuito no mesmo ano"], certa: 0,
+    comentario: "Poupança é um VAZAMENTO: renda que não vira compra. O investimento é uma INJEÇÃO: despesa que não vem do consumo das famílias. O mercado financeiro (bancos, bolsa, títulos) leva a poupança das famílias até as empresas que investem. Se I = S = 100, a despesa total volta a 900 + 100 = 1.000. É a mesma igualdade S = I do bloco anterior." },
+
+  { id: "f4", tipo: "numero", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Passo 4 de 4 — Modelo completo, com governo e resto do mundo. Há três VAZAMENTOS (poupança, impostos líquidos e importações) e três INJEÇÕES (investimento, compras do governo e exportações). Para o fluxo ficar em equilíbrio, o total de vazamentos tem de ser igual ao total de injeções. Com os dados da tabela, quanto precisam ser as EXPORTAÇÕES (X)?",
+    tabela: { cabecalho: ["Vazamentos", "R$ bi", "Injeções", "R$ bi"], linhas: [["Poupança (S)", "200"], ["Impostos líquidos (T)", "150"], ["Importações (M)", "150"]].map((l, i) => l.concat([["Investimento (I)", "180"], ["Compras do governo (G)", "200"], ["Exportações (X)", "?"]][i])) },
+    unidade: "R$ bi", gabarito: 120,
+    comentario: "Vazamentos = S + T + M = 200 + 150 + 150 = 500. Injeções = I + G + X = 180 + 200 + X. Igualando: 380 + X = 500, então X = 120. Note que cada vazamento não precisa ser igual à sua injeção: aqui o governo tem déficit (G > T) e o país importa mais do que exporta (M > X), e as duas diferenças são cobertas pela poupança das famílias, que supera o investimento (S > I)." },
 
   { id: "m25", reserva: true, tipo: "texto", secao: "8. Poupança em economia fechada",
     texto: "🏦 Em uma frase: por que um déficit público persistente pode prejudicar o crescimento de longo prazo?",
