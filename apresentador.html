@@ -347,7 +347,7 @@
 
     // ---- Senha simples (so evita acesso casual/por engano; nao e seguranca real,
     // ja que roda no navegador e o codigo fonte e publico) ----
-    const SENHA_HASH = "a223217b4d0ca0e1dd13200418a350f86939d093a31567251a5d5eae7da44f8c";
+    const SENHA_HASH = "0bde54d3e488fc400b6f94f06a256c8949a4c052005511ad4988a381543898e7";
 
     async function sha256Hex(texto) {
       const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
