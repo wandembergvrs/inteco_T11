@@ -104,11 +104,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=2"></script>
-  <script src="js/mini-charts.js?v=3"></script>
+  <script src="js/mini-charts.js?v=4"></script>
   <script>
     // Banco de perguntas escolhido pela URL: ?banco=macro carrega a revisao de Macro
     const BANCO = new URLSearchParams(location.search).get('banco') === 'macro' ? 'macro' : 'micro';
-    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=11' : 'perguntas.js?v=2') + '"><' + '/script>');
+    document.write('<script src="js/' + (BANCO === 'macro' ? 'perguntas_macro.js?v=12' : 'perguntas.js?v=2') + '"><' + '/script>');
   </script>
   <script>
     const $ = id => document.getElementById(id);
@@ -201,7 +201,8 @@
         try { mountStaticChart('graficoPalcoCanvas', pergunta.grafico, { w: 560, h: 280 }); }
         catch (e) { console.error('[apresentador] erro no grafico:', e); }
       }
-      if (pergunta.tabela) montarTabela($('graficoPalco'), pergunta.tabela, 20);
+      if (pergunta.fluxo) mountFluxoCircular($('graficoPalco'), pergunta.fluxo, 760);
+        if (pergunta.tabela) montarTabela($('graficoPalco'), pergunta.tabela, 20);
 
       const pos = PERGUNTAS.findIndex(p => p.id === id);
       $('contadorPalco').textContent = `Pergunta ${pos + 1} de ${PERGUNTAS.length}` + (pergunta.secao ? ` · ${pergunta.secao}` : '');

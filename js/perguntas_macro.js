@@ -251,24 +251,50 @@ const PERGUNTAS_TODAS = [
       points: [{ x: 10, y: 5, label: "E1", color: "good" }, { x: 8, y: 6, label: "E2", color: "bad" }] },
     comentario: "Juros sobem (5% → 6%) e o investimento privado cai (10 → 8): é o efeito deslocamento (crowding out). Parte da poupança que financiaria empresas passa a financiar o governo." },
 
-  // ---- 9. Fluxo circular da renda (quatro passos: do modelo simples ao completo) ----
-  { id: "f1", tipo: "mc", secao: "9. Fluxo circular da renda",
+  // ---- 9. Fluxo circular da renda: quatro passos para a turma DESENHAR o diagrama (campo "fluxo") ----
+  // Dica de aula: cada aluno desenha no caderno o que a pergunta acrescenta; o diagrama da pergunta seguinte confere.
+  { id: "fc1", tipo: "mc", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Desenhe junto, passo 1 de 4 — Comece com duas caixas: EMPRESAS à esquerda e FAMÍLIAS à direita. Elas se encontram em dois mercados, que são as caixas de cima e de baixo. Que nome vai em cada uma?",
+    fluxo: { topo: "?", base: "?", real: "oculto", moeda: "oculto" },
+    opcoes: ["Em cima, mercados de bens e serviços; embaixo, mercados de fatores de produção", "Em cima, mercado de câmbio; embaixo, mercado financeiro", "Em cima, governo; embaixo, resto do mundo", "Em cima, mercado de trabalho; embaixo, mercado de capitais"], certa: 0,
+    comentario: "Nos mercados de BENS E SERVIÇOS, as empresas vendem e as famílias compram. Nos mercados de FATORES (trabalho, terra e capital), é o contrário: as famílias vendem e as empresas compram. Escreva isso dentro de cada caixa." },
+
+  { id: "fc2", tipo: "mc", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Desenhe junto, passo 2 de 4 — Agora as setas de DENTRO, que mostram as COISAS que circulam (fluxo real), no sentido horário. O que sai das famílias pela seta de baixo, e o que chega a elas pela seta de cima?",
+    fluxo: { real: "?", moeda: "oculto" },
+    opcoes: ["Saem trabalho, terra e capital (os fatores); chegam bens e serviços", "Saem bens e serviços; chegam trabalho, terra e capital", "Saem salários; chegam lucros", "Saem impostos; chegam transferências"], certa: 0,
+    comentario: "As famílias são as donas dos fatores: vendem trabalho, terra e capital, que chegam às empresas como fatores de produção. As empresas transformam os fatores em bens e serviços, que voltam às famílias pelo mercado de bens. Rotule as quatro setas de dentro." },
+
+  { id: "fc3", tipo: "mc", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Desenhe junto, passo 3 de 4 — Faltam as setas de FORA, que mostram o DINHEIRO (fluxo monetário). O dinheiro anda sempre no sentido CONTRÁRIO ao das coisas, porque é o pagamento por elas. O que as empresas pagam pela seta de baixo, e o que elas recebem pela seta de cima?",
+    fluxo: { real: "rotulos", moeda: "?" },
+    opcoes: ["Pagam salários, aluguéis e lucro (a renda das famílias); recebem a receita das vendas (os gastos das famílias)", "Pagam a receita das vendas; recebem salários, aluguéis e lucro", "Pagam impostos; recebem subsídios", "Pagam os bens e serviços; recebem os fatores de produção"], certa: 0,
+    comentario: "Seta de baixo: as empresas pagam SALÁRIOS, ALUGUÉIS E LUCRO pelos fatores, e isso chega às famílias como RENDA. Seta de cima: as famílias fazem GASTOS em bens e serviços, e isso chega às empresas como RECEITA. Rotule as quatro setas de fora e o desenho está completo." },
+
+  { id: "fc4", tipo: "numero", secao: "9. Fluxo circular da renda",
+    texto: "🔄 Desenhe junto, passo 4 de 4 — Diagrama completo. Coloque um número nele: as famílias gastam R$ 1.000 bi em bens e serviços, e as empresas distribuem tudo o que recebem. Seguindo o dinheiro pelas setas de fora, quanto chega às famílias como RENDA?",
+    fluxo: { real: "rotulos", moeda: "rotulos", valores: { gastos: "R$ 1.000 bi", receita: "R$ 1.000 bi", renda: "R$ ? bi" } },
+    unidade: "R$ bi", gabarito: 1000,
+    comentario: "Os R$ 1.000 bi de gastos viram R$ 1.000 bi de receita das empresas, que viram R$ 1.000 bi de salários, aluguéis e lucro, que são R$ 1.000 bi de renda das famílias. Toda transação tem um comprador e um vendedor: por isso DESPESA AGREGADA = RENDA AGREGADA, e o PIB pode ser medido pelos gastos (setas de cima) ou pela renda (setas de baixo)." },
+
+  // Guardadas (fora da sessão): versões sem desenho e extensão com vazamentos e injeções.
+  { id: "f1", reserva: true, tipo: "mc", secao: "9. Fluxo circular da renda",
     texto: "🔄 Passo 1 de 4 — No modelo mais simples do fluxo circular há só FAMÍLIAS e EMPRESAS, que se encontram em dois mercados. No mercado de FATORES DE PRODUÇÃO, quem vende, quem compra e o que circula?",
     opcoes: ["As famílias vendem trabalho, terra e capital às empresas e recebem salários, aluguéis e lucros", "As empresas vendem bens e serviços às famílias e recebem a receita das vendas", "As famílias vendem bens e serviços às empresas e recebem salários", "As empresas vendem trabalho às famílias e recebem lucros"], certa: 0,
     comentario: "São dois mercados e dois sentidos. Mercado de fatores: as famílias são as donas dos fatores e os vendem às empresas, recebendo a RENDA (salários, aluguéis, juros e lucros). Mercado de bens e serviços: as empresas vendem a produção às famílias, que pagam com essa renda (a DESPESA)." },
 
-  { id: "f2", tipo: "numero", secao: "9. Fluxo circular da renda",
+  { id: "f2", reserva: true, tipo: "numero", secao: "9. Fluxo circular da renda",
     texto: "🔄 Passo 2 de 4 — Mesma economia, só com famílias e empresas. As empresas pagam às famílias os valores da tabela, e as famílias gastam TODA a renda comprando o que as empresas produzem. Qual é o valor da produção (PIB) dessa economia?",
     tabela: { cabecalho: ["Pagamento das empresas às famílias", "R$ bi"], linhas: [["Salários", "700"], ["Aluguéis e juros", "150"], ["Lucros", "150"]] },
     unidade: "R$ bi", gabarito: 1000,
     comentario: "Renda das famílias = 700 + 150 + 150 = 1.000. Como elas gastam tudo, a despesa é 1.000, e tudo o que foi produzido foi vendido: produto = renda = despesa = 1.000. É por isso que o PIB pode ser medido pelas três óticas e dá o mesmo número: o dinheiro apenas dá a volta no circuito." },
 
-  { id: "f3", tipo: "mc", secao: "9. Fluxo circular da renda",
+  { id: "f3", reserva: true, tipo: "mc", secao: "9. Fluxo circular da renda",
     texto: "🔄 Passo 3 de 4 — Agora as famílias recebem 1.000, mas gastam só 900 e POUPAM 100. Esse dinheiro sai do circuito (é um vazamento). O que precisa acontecer para que o fluxo continue em 1.000 e as empresas não fiquem com produção encalhada?",
     opcoes: ["As empresas precisam INVESTIR 100, tomando emprestada no mercado financeiro a poupança das famílias", "As famílias precisam poupar ainda mais, para o dinheiro render", "As empresas precisam cortar 100 em salários", "Nada: a poupança volta sozinha ao circuito no mesmo ano"], certa: 0,
     comentario: "Poupança é um VAZAMENTO: renda que não vira compra. O investimento é uma INJEÇÃO: despesa que não vem do consumo das famílias. O mercado financeiro (bancos, bolsa, títulos) leva a poupança das famílias até as empresas que investem. Se o investimento é de 100, igual à poupança, a despesa total volta a 900 + 100 = 1.000. É a mesma igualdade S = I do bloco anterior (aqui sem governo, então poupança das famílias e poupança nacional são a mesma coisa)." },
 
-  { id: "f4", tipo: "numero", secao: "9. Fluxo circular da renda",
+  { id: "f4", reserva: true, tipo: "numero", secao: "9. Fluxo circular da renda",
     texto: "🔄 Passo 4 de 4 — Modelo completo, com governo e resto do mundo. Há três VAZAMENTOS (poupança das famílias, impostos líquidos e importações) e três INJEÇÕES (investimento, compras do governo e exportações). Para o fluxo ficar em equilíbrio, o total de vazamentos tem de ser igual ao total de injeções. Com os dados da tabela, quanto precisam ser as EXPORTAÇÕES (X)?",
     tabela: { cabecalho: ["Vazamentos", "R$ bi", "Injeções", "R$ bi"], linhas: [["Poupança das famílias (privada)", "200"], ["Impostos líquidos (T)", "150"], ["Importações (M)", "150"]].map((l, i) => l.concat([["Investimento (I)", "180"], ["Gasto do governo (G)", "200"], ["Exportações (X)", "?"]][i])) },
     unidade: "R$ bi", gabarito: 120,

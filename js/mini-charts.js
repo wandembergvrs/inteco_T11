@@ -327,6 +327,93 @@ function mountStaticChart(holderId, cfg, opts) {
   renderChart(ctx, cfg, w, h);
 }
 
+// ---- Diagrama do fluxo circular (SVG), montado por etapas ----
+// cfg: { topo, base: "rotulo" | "?"            (caixas dos mercados)
+//        real, moeda: "oculto" | "?" | "rotulos" (setas de dentro = coisas; setas de fora = dinheiro)
+//        valores: { gastos, receita, salarios, renda }  texto extra sob o rótulo das setas de dinheiro }
+function mountFluxoCircular(holder, cfg, largura) {
+  if (typeof holder === 'string') holder = document.getElementById(holder);
+  if (!holder) return;
+  cfg = cfg || {};
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 600, H = 380;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.cssText = `width:100%;max-width:${largura || 520}px;display:block;margin:0 auto 14px;background:#0b1220;border:1px solid #1f2937;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+  const COR_REAL = '#f87171', COR_MOEDA = '#34d399', COR_TXT = '#e5e7eb', COR_SUB = '#94a3b8';
+  const el = (tag, attrs, txt) => {
+    const e = document.createElementNS(NS, tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v));
+    if (txt != null) e.textContent = txt;
+    svg.appendChild(e);
+    return e;
+  };
+  const defs = el('defs');
+  [['real', COR_REAL], ['moeda', COR_MOEDA]].forEach(([id, cor]) => {
+    const m = document.createElementNS(NS, 'marker');
+    m.setAttribute('id', 'fc-' + id); m.setAttribute('viewBox', '0 0 10 10');
+    m.setAttribute('refX', '9'); m.setAttribute('refY', '5');
+    m.setAttribute('markerWidth', '7'); m.setAttribute('markerHeight', '7'); m.setAttribute('orient', 'auto');
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', 'M0,0 L10,5 L0,10 z'); p.setAttribute('fill', cor);
+    m.appendChild(p); defs.appendChild(m);
+  });
+  const linhas = (x, y, textos, attrs) => {
+    [].concat(textos).forEach((t, i) => el('text', Object.assign({ x, y: y + i * 13 }, attrs), t));
+  };
+  const caixa = (x, y, w, h, titulo, subs) => {
+    const incognita = titulo === '?';
+    el('rect', { x, y, width: w, height: h, rx: 8, fill: '#111c33', stroke: incognita ? '#fbbf24' : '#475569',
+      'stroke-width': incognita ? 2 : 1.5, 'stroke-dasharray': incognita ? '6 4' : '' });
+    const tit = [].concat(titulo);
+    const cx = x + w / 2;
+    if (incognita) { el('text', { x: cx, y: y + h / 2 + 10, 'text-anchor': 'middle', fill: '#fbbf24', 'font-size': 30, 'font-weight': 700 }, '?'); return; }
+    const y0 = y + (subs ? 20 : h / 2 - (tit.length - 1) * 8 + 5);
+    tit.forEach((t, i) => el('text', { x: cx, y: y0 + i * 16, 'text-anchor': 'middle', fill: COR_TXT, 'font-size': 14, 'font-weight': 700 }, t));
+    [].concat(subs || []).forEach((t, i) => el('text', { x: cx, y: y0 + tit.length * 16 + 1 + i * 13, 'text-anchor': 'middle', fill: COR_SUB, 'font-size': 10.5 }, t));
+  };
+  // caixas: mercados em cima e embaixo, empresas à esquerda, famílias à direita (como no slide da aula)
+  caixa(215, 12, 170, 70, cfg.topo === '?' ? '?' : ['MERCADOS DE', 'BENS E SERVIÇOS'], ['Empresas vendem · Famílias compram']);
+  caixa(215, 298, 170, 70, cfg.base === '?' ? '?' : ['MERCADOS', 'DE FATORES'], ['Famílias vendem · Empresas compram']);
+  caixa(12, 155, 150, 70, 'EMPRESAS', ['Produzem bens e serviços', 'Contratam fatores']);
+  caixa(438, 155, 150, 70, 'FAMÍLIAS', ['Compram e consomem', 'Vendem fatores']);
+
+  const v = cfg.valores || {};
+  const rot = (modo, texto) => (modo === '?' ? ['?'] : [].concat(texto));
+  const estilo = (modo, cor, extra) => Object.assign(
+    { fill: modo === '?' ? '#fbbf24' : cor, 'font-size': modo === '?' ? 20 : 11, 'font-weight': modo === '?' ? 700 : 600 }, extra);
+
+  // setas de FORA: dinheiro (sentido anti-horário)
+  if (cfg.moeda && cfg.moeda !== 'oculto') {
+    const m = cfg.moeda, a = { fill: 'none', stroke: COR_MOEDA, 'stroke-width': 2.2, 'marker-end': 'url(#fc-moeda)' };
+    el('path', Object.assign({ d: 'M513,155 L513,47 L387,47' }, a));     // famílias -> mercado de bens
+    el('path', Object.assign({ d: 'M215,47 L87,47 L87,153' }, a));       // mercado de bens -> empresas
+    el('path', Object.assign({ d: 'M87,225 L87,333 L213,333' }, a));     // empresas -> mercado de fatores
+    el('path', Object.assign({ d: 'M385,333 L513,333 L513,227' }, a));   // mercado de fatores -> famílias
+    linhas(522, 96, rot(m, ['Gastos'].concat(v.gastos ? [v.gastos] : [])), estilo(m, COR_MOEDA, { 'text-anchor': 'start' }));
+    linhas(78, 96, rot(m, ['Receita'].concat(v.receita ? [v.receita] : [])), estilo(m, COR_MOEDA, { 'text-anchor': 'end' }));
+    linhas(78, 268, rot(m, ['Salários,', 'aluguéis', 'e lucro'].concat(v.salarios ? [v.salarios] : [])), estilo(m, COR_MOEDA, { 'text-anchor': 'end' }));
+    linhas(522, 276, rot(m, ['Renda'].concat(v.renda ? [v.renda] : [])), estilo(m, COR_MOEDA, { 'text-anchor': 'start' }));
+  }
+  // setas de DENTRO: coisas (sentido horário)
+  if (cfg.real && cfg.real !== 'oculto') {
+    const r = cfg.real, a = { fill: 'none', stroke: COR_REAL, 'stroke-width': 2.2, 'marker-end': 'url(#fc-real)' };
+    el('path', Object.assign({ d: 'M150,155 Q190,105 232,84' }, a));     // empresas -> mercado de bens
+    el('path', Object.assign({ d: 'M368,84 Q410,105 450,153' }, a));     // mercado de bens -> famílias
+    el('path', Object.assign({ d: 'M450,225 Q410,275 368,296' }, a));    // famílias -> mercado de fatores
+    el('path', Object.assign({ d: 'M232,296 Q190,275 150,227' }, a));    // mercado de fatores -> empresas
+    linhas(206, 128, rot(r, ['Bens e serviços', 'vendidos']), estilo(r, COR_REAL, { 'text-anchor': 'start' }));
+    linhas(394, 128, rot(r, ['Bens e serviços', 'comprados']), estilo(r, COR_REAL, { 'text-anchor': 'end' }));
+    linhas(394, 246, rot(r, ['Trabalho, terra', 'e capital']), estilo(r, COR_REAL, { 'text-anchor': 'end' }));
+    linhas(206, 246, rot(r, ['Fatores de', 'produção']), estilo(r, COR_REAL, { 'text-anchor': 'start' }));
+  }
+  // legenda no centro
+  let ly = 184;
+  if (cfg.real && cfg.real !== 'oculto') { el('text', { x: 300, y: ly, 'text-anchor': 'middle', fill: COR_REAL, 'font-size': 10.5 }, '→ por dentro: coisas (fluxo real)'); ly += 14; }
+  if (cfg.moeda && cfg.moeda !== 'oculto') el('text', { x: 300, y: ly, 'text-anchor': 'middle', fill: COR_MOEDA, 'font-size': 10.5 }, '→ por fora: dinheiro (fluxo monetário)');
+  holder.appendChild(svg);
+}
+
 // ---- Helpers da enquete (compartilhados por enquete.html e apresentador.html) ----
 
 // Tabela de dados de uma pergunta: { cabecalho: [...], linhas: [[...], ...] }
